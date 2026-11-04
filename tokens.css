@@ -1,0 +1,33 @@
+/* ui-elements design tokens.
+ *
+ * Optional: every component has built-in fallbacks, so it renders without this
+ * file. Load it (or override any of these on :root / any ancestor) to theme all
+ * components at once. Values use light-dark(), so they follow `color-scheme`.
+ *
+ *   <link rel="stylesheet" href=".../tokens.css">
+ *   <html data-theme="dark">   force dark   (or "light"; omit to follow the OS)
+ */
+:root {
+  color-scheme: light dark;
+
+  /* colors */
+  --ui-color-bg: light-dark(#ffffff, #0f1117);
+  --ui-color-surface: light-dark(#ffffff, #161b22);
+  --ui-color-surface-2: light-dark(#f4f5f7, #1c2128);
+  --ui-color-text: light-dark(#1b1f24, #e1e4e8);
+  --ui-color-muted: light-dark(#5f6b7a, #8b949e);
+  --ui-color-border: light-dark(#d0d7de, #30363d);
+  --ui-color-accent: light-dark(#1f6feb, #388bfd);
+  --ui-color-on-accent: #ffffff;
+  --ui-color-danger: light-dark(#cf222e, #f85149);
+  --ui-color-success: light-dark(#1a7f37, #3fb950);
+
+  /* spacing, shape, type */
+  --ui-space: 12px;
+  --ui-radius: 8px;
+  --ui-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --ui-font-size: 0.95rem;
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
