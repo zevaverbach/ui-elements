@@ -2,7 +2,7 @@
 
 Goal: an agent can change a page's UI at runtime, with no page reload and no build step, by swapping in HTML made of existing `ui-*` components. This only works if state lives outside the region that gets swapped.
 
-Implemented by `<ui-store>`, `<ui-each>` and `swapOutlet()` (see [`specs/ui-store.md`](specs/ui-store.md)). Working example: [`demo/shell.html`](../demo/shell.html).
+Implemented by `<ui-store>`, `<ui-each>` and `swapOutlet()` (see [`specs/ui-store.md`](specs/ui-store.md)). Working examples: [`demo/shell.html`](../demo/shell.html) (full shell) and the live editor in [`demo/index.html`](../demo/index.html), which re-renders edited markup as you type through `swapOutlet`.
 
 ![The stable shell demo](media/shell.png)
 

@@ -16,13 +16,47 @@
   button.demo { cursor: pointer; } button.demo.primary { background: var(--ui-color-accent); color: var(--ui-color-on-accent); border-color: transparent; }
   .bar input { flex: 1; min-width: 12rem; }
   pre#log { background: var(--ui-color-surface-2); border: 1px solid var(--ui-color-border); border-radius: var(--ui-radius); padding: .6rem; max-height: 10rem; overflow: auto; font-size: .8rem; white-space: pre-wrap; }
+.demo-nav{font-size:.85rem;margin:.2rem 0 .6rem}.demo-nav a{color:var(--ui-color-accent,#1f6feb)}
+  .live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+  @media (max-width: 760px) { .live-grid { grid-template-columns: 1fr; } }
+  #live-src { width: 100%; min-height: 15rem; box-sizing: border-box; font: .8rem/1.45 ui-monospace, monospace; padding: .6rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; tab-size: 2; resize: vertical; }
+  #live-outlet { border: 2px dashed var(--ui-color-border); border-radius: var(--ui-radius); padding: .75rem; min-height: 8rem; display: grid; gap: .4rem; align-content: start; }
+  #live-outlet ui-each { display: contents; }
+  #live-status { font-size: .8rem; color: var(--ui-color-muted); min-height: 1.3em; }
+  #live-data { font: .75rem/1.4 ui-monospace, monospace; max-height: 9rem; overflow: auto; margin: .3rem 0 0; }
+  select.demo { font: inherit; padding: .35rem .6rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; }
 </style>
 </head>
 <body>
 <main>
   <h1>ui-elements</h1>
+  <nav class="demo-nav" aria-label="Demo pages"><a href="index.html">Components &amp; live editor</a> · <a href="shell.html">Stable shell</a> · <a href="sanitizer-test.html">Sanitizer test</a> · <a href="store-test.html">Store test</a></nav>
   <p class="note">Every component is loaded by relative path below. Serve this folder over http(s) (e.g. <code>python3 -m http.server</code> from the repo root, then open <code>/demo/</code>); ES modules do not load from <code>file://</code>. Speech needs a browser with the Web Speech API and a secure context.</p>
   <div class="bar"><button class="demo" id="theme">Toggle dark / light</button></div>
+
+
+  <h2>Live editor</h2>
+  <p class="note">Edit the markup on the left; the dashed box on the right updates as you type, without a reload. Only <code>ui-*</code> components and plain layout tags work: scripts, <code>on*</code> handlers and <code>javascript:</code> URLs are stripped. The list below is bound to a <code>&lt;ui-store&gt;</code>, so ticking, editing, reordering and deleting update the store (shown underneath) and survive every edit of the markup. Give things you want to keep alive across edits a stable <code>id</code>.</p>
+  <div class="bar">
+    <label>Example: <select class="demo" id="live-preset" aria-label="Load an example"></select></label>
+    <button class="demo" id="live-reset">Reset data</button>
+  </div>
+  <div class="live-grid">
+    <div>
+      <textarea id="live-src" spellcheck="false" aria-label="Markup to render live"></textarea>
+      <div id="live-status" role="status" aria-live="polite"></div>
+    </div>
+    <div>
+      <div id="live-outlet" aria-label="Live preview"></div>
+      <details open><summary>Store data (<code>demo</code>)</summary><pre id="live-data"></pre></details>
+    </div>
+  </div>
+  <ui-store name="demo"><script type="application/json">{"items":[
+    {"id":"a","text":"Try editing this markup","done":false},
+    {"id":"b","text":"Tick, rename or drag me","done":false},
+    {"id":"c","text":"Already done","done":true},
+    {"id":"d","text":"Use where to filter a list","done":false}
+  ]}</script></ui-store>
 
   <h2>ui-todo-item</h2>
   <p class="note">Check, double-click text (or ✎) to edit, ✕ twice to delete, 🎤 to dictate (hidden if unsupported). Drag the grip, or focus it and press Space, then arrow keys, then Space.</p>
@@ -64,6 +98,8 @@
 
 <script type="module" src="../components/ui-todo-item.js"></script>
 <script type="module" src="../components/ui-chat-panel.js"></script>
+<script type="module" src="../components/ui-store.js"></script>
+<script type="module" src="../components/ui-each.js"></script>
 <script type="module">
   const $ = (s) => document.querySelector(s);
   const log = $('#log');
@@ -109,6 +145,65 @@
   };
   $('#add').onclick = add;
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+</script>
+
+<script type="module">
+  import { swapOutlet } from '../components/_shared/outlet.js';
+  import { get, set } from '../components/_shared/store-registry.js';
+
+  const EVENTS = `events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}},"ui-reorder":{"action":"move"},"ui-delete":{"action":"remove"}}'`;
+  const MAP = `map='{"text":"text","checked":"done"}'`;
+  const PRESETS = {
+    'To-do list bound to the store': `<h3>My list</h3>
+<ui-each id="rows" store="demo" tag="ui-todo-item"
+  ${MAP}
+  ${EVENTS}></ui-each>`,
+    'Open and done, side by side': `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+  <section>
+    <h3>Open</h3>
+    <ui-each id="open" store="demo" tag="ui-todo-item" where='{"done":false}'
+      ${MAP}
+      ${EVENTS}></ui-each>
+  </section>
+  <section>
+    <h3>Done</h3>
+    <ui-each id="done" store="demo" tag="ui-todo-item" where='{"done":true}'
+      ${MAP}
+      ${EVENTS}></ui-each>
+  </section>
+</div>`,
+    'Standalone items (no store)': `<h3>Plain components</h3>
+<ui-todo-item id="s1" text="A plain item"></ui-todo-item>
+<ui-todo-item id="s2" text="With progress and a label" label="Medium" progress="50"></ui-todo-item>
+<ui-todo-item id="s3" text="Done" checked no-speech></ui-todo-item>`,
+    'Try to inject script (it is stripped)': `<h3>Sanitizer</h3>
+<p onclick="alert('handler')">This paragraph's onclick is removed.</p>
+<a href="javascript:alert('url')">javascript: link (href removed)</a>
+<img src="x" onerror="alert('onerror')" alt="">
+<script>alert('script')<\/script>
+<ui-todo-item id="ok" text="ui-* tags survive"></ui-todo-item>`,
+  };
+  const $ = (s) => document.querySelector(s);
+  const src = $('#live-src'), status = $('#live-status'), preset = $('#live-preset');
+  for (const name of Object.keys(PRESETS)) preset.add(new Option(name, name));
+  src.value = PRESETS[preset.value];
+
+  let timer, n = 0;
+  const render = async () => {
+    try {
+      await swapOutlet(src.value, { outlet: '#live-outlet' });
+      const stripped = /<script|\son\w+\s*=|javascript:/i.test(src.value) ? ' · scripts, handlers or javascript: URLs were stripped' : '';
+      status.textContent = `Rendered ${new Date().toLocaleTimeString()} (swap #${++n})${stripped}`;
+    } catch (err) { status.textContent = `Could not render: ${err.message}`; }
+  };
+  src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
+  preset.addEventListener('change', () => { src.value = PRESETS[preset.value]; render(); });
+
+  const data = () => { $('#live-data').textContent = JSON.stringify(get('demo', ''), null, 1); };
+  document.addEventListener('ui-store-change', (e) => { if (e.detail.name === 'demo') data(); });
+  $('#live-reset').onclick = () => set('demo', 'items', [
+    { id: 'a', text: 'Try editing this markup', done: false }, { id: 'b', text: 'Tick, rename or drag me', done: false }, { id: 'c', text: 'Already done', done: true }]);
+  render().then(data);
 </script>
 </body>
 </html>
