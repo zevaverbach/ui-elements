@@ -1,0 +1,33 @@
+{
+ "id": "chat-left",
+ "title": "A support chat that slides in from the left",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Build a help-centre page with a heading and a short paragraph in <main id=\"outlet\">, and a chat panel titled \"Support\" that is open, slides in from the left edge, has the placeholder \"Describe your problem\" and starts with one assistant message: \"How can I help?\". The chat needs no store. No script.",
+ "assert": [
+  {
+   "step": "Wait for the panel to finish sliding in",
+   "wait": 450
+  },
+  {
+   "step": "The panel is titled Support and opens from the left",
+   "eval": "(() => { const c = document.querySelector('ui-chat-panel'); return c.heading === 'Support' && c.getAttribute('side') === 'left' && c.open; })()"
+  },
+  {
+   "step": "It is flush with the left edge",
+   "eval": "Math.round(document.querySelector('ui-chat-panel').shadowRoot.querySelector('.panel').getBoundingClientRect().left) === 0"
+  },
+  {
+   "step": "The assistant greeting is visible",
+   "eval": "document.querySelector('ui-chat-panel [data-role=agent]').textContent.trim() === 'How can I help?'"
+  },
+  {
+   "step": "The composer has the requested placeholder",
+   "eval": "document.querySelector('ui-chat-panel').shadowRoot.querySelector('textarea').placeholder === 'Describe your problem'"
+  },
+  {
+   "step": "The page content is in the outlet",
+   "eval": "!!document.querySelector('#outlet h1') && !document.querySelector('#outlet ui-chat-panel')"
+  }
+ ]
+}

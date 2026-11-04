@@ -1,0 +1,38 @@
+{
+ "id": "shopping-list",
+ "title": "Shopping list with a filter view and a chat panel",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Build a page for a shopping list. Items live in a store: Milk and Eggs still to buy, Bread already in the basket. Show two filtered views of the same store side by side, \"To buy\" and \"In basket\", so ticking an item moves it from one to the other. Add a chat panel (open, with a short greeting from the assistant) that keeps its messages in its own store. Use only the components in components.json and follow docs/state-and-shell.md: stores and the chat panel in the stable shell, the lists inside <main id=\"outlet\">, no script.",
+ "assert": [
+  {
+   "step": "All three items are rendered inside the outlet",
+   "eval": "[...document.querySelectorAll('#outlet ui-todo-item')].map(i => i.text).sort().join(',')",
+   "equals": "Bread,Eggs,Milk"
+  },
+  {
+   "step": "There are two filtered lists over the same store",
+   "eval": "document.querySelectorAll('#outlet ui-each[where]').length >= 2 && new Set([...document.querySelectorAll('#outlet ui-each')].map(e => e.getAttribute('store'))).size === 1"
+  },
+  {
+   "step": "Milk starts in a list that shows items that are not done",
+   "eval": "(() => { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => x.text === 'Milk'); return !!i && !i.checked && JSON.parse(i.closest('ui-each').getAttribute('where')).done === false; })()"
+  },
+  {
+   "step": "Tick Milk",
+   "eval": "(() => { [...document.querySelectorAll('#outlet ui-todo-item')].find(x => x.text === 'Milk').shadowRoot.querySelector('.check').click(); return true; })()"
+  },
+  {
+   "step": "Wait for the store to update the views",
+   "wait": 250
+  },
+  {
+   "step": "Milk moved to the list that shows done items",
+   "eval": "(() => { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => x.text === 'Milk'); return !!i && i.checked && JSON.parse(i.closest('ui-each').getAttribute('where')).done === true; })()"
+  },
+  {
+   "step": "The chat panel is open, outside the outlet, with its greeting",
+   "eval": "(() => { const c = document.querySelector('ui-chat-panel'); return !!c && c.open && !c.closest('#outlet') && c.messages.length >= 1 && c.messages[0].role === 'agent'; })()"
+  }
+ ]
+}

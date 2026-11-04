@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Release checklist</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  section { display: grid; gap: 6px; align-content: start; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+</head>
+<body>
+
+<main id="outlet">
+  <h1>Release checklist</h1>
+  <ui-todo-item id="notes" text="Write the release notes" label="Docs" progress="25"></ui-todo-item>
+  <ui-todo-item id="tests" text="Run the full test suite" label="QA" progress="0"></ui-todo-item>
+  <ui-todo-item id="tag" text="Tag the release" label="Release" checked></ui-todo-item>
+</main>
+</body>
+</html>

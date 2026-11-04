@@ -1,0 +1,29 @@
+{
+ "id": "todo-progress",
+ "title": "A release checklist with progress steps (no store)",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Build a small release checklist with three items: \"Write the release notes\" (25% done), \"Run the full test suite\" (0% done) and \"Tag the release\" (already done). Each shows a progress indicator with steps. No store is needed; use the todo item component's own attributes. Put the content inside <main id=\"outlet\">. No script.",
+ "assert": [
+  {
+   "step": "Three items, one already checked",
+   "eval": "document.querySelectorAll('#outlet ui-todo-item').length === 3 && document.querySelectorAll('#outlet ui-todo-item[checked]').length === 1"
+  },
+  {
+   "step": "The release-notes item shows 25% progress",
+   "eval": "[...document.querySelectorAll('#outlet ui-todo-item')].find(i => i.text.startsWith('Write')).progress === 25"
+  },
+  {
+   "step": "Click its 75% step",
+   "eval": "(() => { [...document.querySelectorAll('#outlet ui-todo-item')].find(i => i.text.startsWith('Write')).shadowRoot.querySelector('.step[data-v=\"75\"]').click(); return true; })()"
+  },
+  {
+   "step": "Progress is now 75",
+   "eval": "[...document.querySelectorAll('#outlet ui-todo-item')].find(i => i.text.startsWith('Write')).progress === 75"
+  },
+  {
+   "step": "Click 100%: the item is checked",
+   "eval": "(() => { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => x.text.startsWith('Write')); i.shadowRoot.querySelector('.step[data-v=\"100\"]').click(); return i.checked && i.progress === 100; })()"
+  }
+ ]
+}
