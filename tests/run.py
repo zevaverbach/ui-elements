@@ -68,6 +68,7 @@ def main():
     ap.add_argument("-k", dest="keyword", help="run tests whose full name contains this text")
     ap.add_argument("--gifs", action="store_true", help="write tests/media GIFs for passing tests")
     ap.add_argument("--list", action="store_true")
+    ap.add_argument("--table", action="store_true", help="print the markdown table of browser tests and their GIFs (for tests/README.md)")
     ap.add_argument("--headed", action="store_true")
     ap.add_argument("--slow", action="store_true", help="longer on-screen dwell per step (default with --gifs)")
     ap.add_argument("--no-online", action="store_true", help="skip tests that need the internet")
@@ -78,6 +79,20 @@ def main():
         importlib.import_module(os.path.basename(f)[:-3])
     specs = [s for s in TESTS if (not a.suite or s.suite in a.suite) and (not a.keyword or a.keyword in s.full)]
     run_cat = (not a.suite or "catalog" in a.suite) and (not a.keyword or a.keyword in "catalog-integrity")
+    if a.table:
+        import inspect, re as _re
+        by_suite = {}
+        for s in specs:
+            by_suite.setdefault(s.suite, []).append(s)
+        for suite, items in by_suite.items():
+            print(f"#### {suite}\n\n<details><summary>{len(items)} recorded tests</summary>\n\n| Test | What the recording shows | Recording |\n|---|---|---|")
+            for s in items:
+                steps = _re.findall(r't\.step\(f?"([^"]*)"', inspect.getsource(s.fn))
+                what = " → ".join(_re.sub(r"\{[^}]*\}", "…", x).replace("|", "/") for x in steps[:4]) + (" → …" if len(steps) > 4 else "")
+                cell = f"![{s.full}](media/{s.full}.gif)" if s.gif else "(no GIF)"
+                print(f"| `{s.name}`{' (online)' if s.online else ''} | {what} | {cell} |")
+            print("\n</details>\n")
+        return 0
     if a.list:
         print("catalog-integrity")
         for s in specs:
@@ -87,8 +102,9 @@ def main():
     app, cdn = serve(ROOT), serve(ROOT, cdn_layout=True)
     env.base, env.cdn, env.root, env.pages = app.url, cdn.url, ROOT, app.pages
     env.catalog = json.load(open(os.path.join(ROOT, "components.json")))
-    env.online = (not a.no_online) and online()
-    env.idiomorph = ensure_idiomorph(env.online)
+    reachable = online()
+    env.online = reachable and not a.no_online          # --no-online skips the online *checks*...
+    env.idiomorph = ensure_idiomorph(reachable)         # ...but a one-time fetch of the pinned Idiomorph is still fine
     dwell = 0.55 if (a.gifs or a.slow) else 0.05
     results = []
     try:

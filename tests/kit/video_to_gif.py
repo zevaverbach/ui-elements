@@ -12,12 +12,12 @@ class GifTooLarge(RuntimeError):
     pass
 
 # (fps, max_width, colors): tried in order until the file fits.
-LADDER = [(10, 720, 128), (10, 640, 96), (8, 560, 64), (8, 480, 48), (6, 400, 32)]
+LADDER = [(8, 640, 64), (8, 560, 48), (6, 480, 32), (6, 400, 32), (5, 360, 24)]
 
 def _run(args):
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *args], check=True)
 
-def video_to_gif(src, dst, start=0.0, end=None, max_seconds=20.0, max_bytes=1_500_000, ladder=LADDER):
+def video_to_gif(src, dst, start=0.0, end=None, max_seconds=18.0, max_bytes=1_500_000, ladder=LADDER):
     if shutil.which("ffmpeg") is None:
         raise RuntimeError("ffmpeg not found on PATH")
     dur = max_seconds if end is None else min(max_seconds, max(0.5, end - start))
