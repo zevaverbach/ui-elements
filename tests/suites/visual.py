@@ -9,7 +9,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "screenshot
 AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
 LUMA = "(() => { const m = getComputedStyle(document.body).backgroundColor.match(/\\d+(\\.\\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; })()"
 
-@test("visual", "demo-pages-light-and-dark", needs_idiomorph=True, viewport={"width": 720, "height": 480})
+@test("visual", "demo-pages-light-and-dark", needs_idiomorph=True, viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource", "status of 404")
     os.makedirs(OUT, exist_ok=True)
@@ -33,7 +33,7 @@ def _(t):
         if themed:
             check(sizes[0] != sizes[1], f"{name}: light and dark screenshots are identical")
 
-@test("visual", "axe-accessibility", online=True, needs_idiomorph=True, viewport={"width": 720, "height": 480})
+@test("visual", "axe-accessibility", online=True, needs_idiomorph=True, viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource", "status of 404")
     p = t.page

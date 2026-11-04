@@ -38,5 +38,11 @@ Read `docs/state-and-shell.md` (guidance) and `docs/specs/ui-store.md` (spec) be
 - Give anything with transient state a stable `id`; `ui-each` children get `<ui-each id>-<key>`.
 - Run `demo/sanitizer-test.html` and `demo/store-test.html` (over http) after touching the sanitizer, registry or `ui-each`.
 
+## Testing
+Read `tests/README.md` (what is tested, how to run it) and `docs/testing-your-app.md` (the pattern, for your own apps).
+- After building or changing a UI from these components, write or run Playwright tests for the user flow; do not call the work done until they pass.
+- Keep failure bundles (`tests/failures/<test>/`, gitignored). When something fails, read `report.json` first, then `filmstrip.png`, then `console.log`; fix and rerun. `failure.gif` is for humans.
+- `python3 tests/run.py` runs everything (headless, offline). A new or changed component needs tests in `tests/suites/`, an entry in `components.json` that `node scripts/check-catalog.mjs` accepts (it diffs source against catalog both ways), and, for browser tests, a refreshed GIF via `python3 tests/run.py --gifs --suite <suite>`. Keep `tests/media/` under 15 MB.
+
 ## Releasing
 Commit small logical steps to `main`. Cut releases as tags (`v0.x.y`) and update the pinned versions in README, AGENTS.md and `components.json`.

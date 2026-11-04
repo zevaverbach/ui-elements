@@ -3,7 +3,7 @@ from registry import test, env, open_fixture, mount
 from helpers import focused, texts, check, eq
 
 SHELL = "/demo/shell.html"
-VIEW = {"width": 720, "height": 640}
+VIEW = {"width": 640, "height": 480}
 items = lambda p: p.evaluate("document.querySelectorAll('#outlet ui-todo-item').length")
 status = lambda p: p.inner_text("#status")
 

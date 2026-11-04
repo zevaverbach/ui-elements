@@ -122,6 +122,20 @@ Put data in `<ui-store>` elements and long-lived UI in a stable shell; an agent 
 
 Swapped HTML is sanitized (no `<script>`, `on*` handlers or `javascript:` URLs). Read [docs/state-and-shell.md](docs/state-and-shell.md) for the rules and [docs/specs/ui-store.md](docs/specs/ui-store.md) for the full spec. Try it live: the [live editor](https://zevaverbach.github.io/ui-elements/demo/) on the demo page re-renders your markup as you type (no reload, state kept), and [`demo/shell.html`](https://zevaverbach.github.io/ui-elements/demo/shell.html) shows the full shell with layout buttons and its own live playground. These pieces are on `main` and ship with the next tag (suggested `v0.2.0`); until then pin a commit SHA.
 
+## Tests
+
+A real-browser suite covers the components, shared state and the stable shell, the sanitizer, CDN-style consumption and agent-composed pages. Every browser test is recorded as a captioned GIF; failures write a bundle (`failure.gif`, `filmstrip.png`, `report.json`, `console.log`) that agents can read.
+
+```sh
+python3 tests/run.py            # everything, headless (needs playwright, ffmpeg, node)
+```
+
+| Drag-reorder with the mouse | Swap the outlet, keep focus and caret |
+|---|---|
+| ![ui-todo-item drag reorder](tests/media/todo-item-drag-reorder.gif) | ![state swap keeps focus](tests/media/state-swap-keeps-focus-caret-and-text.gif) |
+
+Everything, one GIF per test, and how to run a single suite: [tests/README.md](tests/README.md). To test **your own** app built from these components with the same pattern (and a copy-paste kit): [docs/testing-your-app.md](docs/testing-your-app.md).
+
 ## URLs
 
 | What | URL |
@@ -150,6 +164,6 @@ python3 scripts/capture-media.py   # needs playwright + ffmpeg; see the file hea
 ## Check the catalog
 
 ```sh
-node scripts/check-catalog.mjs   # dev-only; the library itself needs no Node
+node scripts/check-catalog.mjs   # dev-only; the library itself needs no Node (also part of `python3 tests/run.py`)
 # test pages (open over http, the tab title shows PASS (n)): demo/sanitizer-test.html, demo/store-test.html
 ```
