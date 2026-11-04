@@ -7,20 +7,21 @@
 <link rel="stylesheet" href="../tokens.css">
 <style>
   body { margin: 0; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); line-height: 1.5; }
-  .shell { max-width: 50rem; margin: 0 auto; padding: 1rem 16px 4rem; }
+  .shell { max-width: 80rem; margin: 0 auto; padding: 1rem 16px 4rem; }
   h1 { font-size: 1.3rem; margin: 0 0 .25rem; } h2 { font-size: 1rem; margin: .2rem 0 .5rem; }
-  p.note { color: var(--ui-color-muted); font-size: .85rem; margin: .2rem 0 .8rem; }
+  p.note { color: var(--ui-color-muted); font-size: .85rem; margin: .2rem 0 .8rem; max-width: 80ch; }
   .bar { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; align-items: center; }
   button, input, textarea { font: inherit; color: inherit; background: var(--ui-color-surface); border: 1px solid var(--ui-color-border); border-radius: var(--ui-radius); padding: .4rem .75rem; }
   button { cursor: pointer; } button.primary { background: var(--ui-color-accent); color: var(--ui-color-on-accent); border-color: transparent; }
   input[type=text] { flex: 1; min-width: 10rem; }
-  #outlet { border: 2px dashed var(--ui-color-border); border-radius: var(--ui-radius); padding: .75rem; max-height: 22rem; overflow: auto; }
-  #outlet .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  #outlet { container-type: inline-size; border: 2px dashed var(--ui-color-border); border-radius: var(--ui-radius); padding: .75rem; max-height: 22rem; overflow: auto; }
+  #outlet .cols { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+  /* two columns only when the outlet itself is wide enough for two readable lists (not on phones or iPad portrait) */
+  @container (min-width: 52rem) { #outlet .cols { grid-template-columns: 1fr 1fr; } }
   #outlet ui-each, #outlet .list { display: contents; }
   .list-wrap { display: grid; gap: .4rem; }
   #status { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--ui-color-muted); }
   textarea { width: 100%; box-sizing: border-box; min-height: 8rem; font-family: ui-monospace, monospace; font-size: .8rem; }
-  @media (max-width: 560px) { #outlet .cols { grid-template-columns: 1fr; } }
 .demo-nav{font-size:.85rem;margin:.2rem 0 .6rem}.demo-nav a{color:var(--ui-color-accent,#1f6feb)}</style>
 </head>
 <body>

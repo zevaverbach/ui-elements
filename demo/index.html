@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="../tokens.css">
 <style>
   body { margin: 0; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); line-height: 1.5; }
-  main { max-width: 44rem; margin: 0 auto; padding: 1rem 16px 4rem; }
+  main { max-width: 80rem; margin: 0 auto; padding: 1rem 16px 4rem; }
   h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid var(--ui-color-border); padding-bottom: .3rem; }
-  p.note { color: var(--ui-color-muted); font-size: .9rem; margin: .3rem 0 .8rem; }
+  p.note { color: var(--ui-color-muted); font-size: .9rem; margin: .3rem 0 .8rem; max-width: 80ch; }
   .stack { display: grid; gap: .5rem; }
   .bar { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
   button.demo, .bar input { font: inherit; padding: .45rem .8rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; }
@@ -18,10 +18,13 @@
   pre#log { background: var(--ui-color-surface-2); border: 1px solid var(--ui-color-border); border-radius: var(--ui-radius); padding: .6rem; max-height: 10rem; overflow: auto; font-size: .8rem; white-space: pre-wrap; }
 .demo-nav{font-size:.85rem;margin:.2rem 0 .6rem}.demo-nav a{color:var(--ui-color-accent,#1f6feb)}
   .live-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
-  @media (max-width: 760px) { .live-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 960px) { .live-grid { grid-template-columns: 1fr; } }
   #live-src { width: 100%; min-height: 15rem; box-sizing: border-box; font: .8rem/1.45 ui-monospace, monospace; padding: .6rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; tab-size: 2; resize: vertical; }
   #live-outlet { border: 2px dashed var(--ui-color-border); border-radius: var(--ui-radius); padding: .75rem; min-height: 8rem; display: grid; gap: .4rem; align-content: start; }
   #live-outlet ui-each { display: contents; }
+  #live-report { font-size: .8rem; margin: .4rem 0; padding: .5rem .7rem; border: 1px solid var(--ui-color-border); border-left: 4px solid var(--ui-color-accent); border-radius: var(--ui-radius); background: var(--ui-color-surface); }
+  #live-report[hidden] { display: none; }
+  #live-report ul { margin: .25rem 0 0; padding-left: 1.2rem; } #live-report code { font-size: .75rem; }
   #live-status { font-size: .8rem; color: var(--ui-color-muted); min-height: 1.3em; }
   #live-data { font: .75rem/1.4 ui-monospace, monospace; max-height: 9rem; overflow: auto; margin: .3rem 0 0; }
   select.demo { font: inherit; padding: .35rem .6rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; }
@@ -45,6 +48,7 @@
     <div>
       <textarea id="live-src" spellcheck="false" aria-label="Markup to render live"></textarea>
       <div id="live-status" role="status" aria-live="polite"></div>
+      <div id="live-report" aria-live="polite"></div>
     </div>
     <div>
       <div id="live-outlet" aria-label="Live preview"></div>
@@ -158,7 +162,7 @@
 <ui-each id="rows" store="demo" tag="ui-todo-item"
   ${MAP}
   ${EVENTS}></ui-each>`,
-    'Open and done, side by side': `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    'Open and done, side by side': `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr));gap:1rem">
   <section>
     <h3>Open</h3>
     <ui-each id="open" store="demo" tag="ui-todo-item" where='{"done":false}'
@@ -177,11 +181,14 @@
 <ui-todo-item id="s2" text="With progress and a label" label="Medium" progress="50"></ui-todo-item>
 <ui-todo-item id="s3" text="Done" checked no-speech></ui-todo-item>`,
     'Try to inject script (it is stripped)': `<h3>Sanitizer</h3>
-<p onclick="alert('handler')">This paragraph's onclick is removed.</p>
-<a href="javascript:alert('url')">javascript: link (href removed)</a>
-<img src="x" onerror="alert('onerror')" alt="">
-<script>alert('script')<\/script>
-<ui-todo-item id="ok" text="ui-* tags survive"></ui-todo-item>`,
+<p>Each line below contains something dangerous. The text stays; the dangerous part is removed (see the report under the editor).</p>
+<p onclick="alert('onclick ran')">1. This paragraph had an onclick handler. Click it: nothing happens.</p>
+<p><a href="javascript:alert('javascript: URL ran')">2. This link had a javascript: URL.</a> It no longer goes anywhere.</p>
+<p>3. An image with an onerror handler: <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" onerror="alert('onerror ran')" alt="" width="14" height="14"> (the handler is gone).</p>
+<p>4. A script tag was written between this line and the next. It is removed with its contents.</p>
+<script>alert('script ran')<\/script>
+<p>5. A ui-* component survives untouched:</p>
+<ui-todo-item id="ok" text="I am a ui-* tag, so I stay"></ui-todo-item>`,
   };
   const $ = (s) => document.querySelector(s);
   const src = $('#live-src'), status = $('#live-status'), preset = $('#live-preset');
@@ -189,11 +196,29 @@
   src.value = PRESETS[preset.value];
 
   let timer, n = 0;
+  // What did the sanitizer remove? Look at the markup as written (parsed inertly), then confirm the rendered preview is clean.
+  const BAD_URL = /^\s*(javascript|vbscript):/i;
+  function findings(html) {
+    const tpl = document.createElement('template'); tpl.innerHTML = html;
+    const out = [];
+    for (const el of tpl.content.querySelectorAll('*')) {
+      const tag = el.localName;
+      if (tag === 'script' && !el.closest('ui-store')) out.push(`<code>&lt;script&gt;</code> element removed, with its contents`);
+      for (const a of el.attributes) {
+        if (/^on/i.test(a.name)) out.push(`<code>${a.name}</code> handler removed from <code>&lt;${tag}&gt;</code>`);
+        else if (['href', 'src', 'action', 'formaction'].includes(a.name) && BAD_URL.test(a.value)) out.push(`<code>${a.name}="javascript:…"</code> removed from <code>&lt;${tag}&gt;</code>`);
+      }
+    }
+    return out;
+  }
+  const clean = () => ![...$('#live-outlet').querySelectorAll('*')].some((el) => el.localName === 'script' || [...el.attributes].some((a) => /^on/i.test(a.name) || BAD_URL.test(a.value)));
   const render = async () => {
     try {
       await swapOutlet(src.value, { outlet: '#live-outlet' });
-      const stripped = /<script|\son\w+\s*=|javascript:/i.test(src.value) ? ' · scripts, handlers or javascript: URLs were stripped' : '';
-      status.textContent = `Rendered ${new Date().toLocaleTimeString()} (swap #${++n})${stripped}`;
+      status.textContent = `Rendered ${new Date().toLocaleTimeString()} (swap #${++n})`;
+      const found = findings(src.value), report = $('#live-report');
+      report.hidden = !found.length;
+      if (found.length) report.innerHTML = `<strong>Sanitizer removed ${found.length} dangerous thing${found.length > 1 ? 's' : ''}</strong> (preview verified clean: ${clean() ? 'yes' : '<b>NO</b>'}):<ul>${found.map((f) => `<li>${f}</li>`).join('')}</ul>`;
     } catch (err) { status.textContent = `Could not render: ${err.message}`; }
   };
   src.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(render, 150); });
@@ -201,8 +226,9 @@
 
   const data = () => { $('#live-data').textContent = JSON.stringify(get('demo', ''), null, 1); };
   document.addEventListener('ui-store-change', (e) => { if (e.detail.name === 'demo') data(); });
-  $('#live-reset').onclick = () => set('demo', 'items', [
-    { id: 'a', text: 'Try editing this markup', done: false }, { id: 'b', text: 'Tick, rename or drag me', done: false }, { id: 'c', text: 'Already done', done: true }]);
+  // Reset to the seed the page was loaded with (read from the store's own JSON, so the two cannot drift apart).
+  const SEED = JSON.parse(document.querySelector('ui-store[name="demo"] script').textContent);
+  $('#live-reset').onclick = () => set('demo', '', structuredClone(SEED));
   render().then(data);
 </script>
 </body>
