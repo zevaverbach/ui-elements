@@ -53,7 +53,7 @@ function withoutIsValue(el) {
 }
 
 function clean(node, allowed) {
-  for (const child of [...node.childNodes]) {
+  for (let child of [...node.childNodes]) {
     if (child.nodeType === 8) { child.remove(); continue; }          // comments
     if (child.nodeType !== 1) continue;                               // text stays
     const tag = child.localName;
