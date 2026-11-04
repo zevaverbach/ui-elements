@@ -1,0 +1,48 @@
+# GitHub Actions workflow for the ui-elements test suites.
+# To enable: copy this file to .github/workflows/tests.yml (pushing workflow files needs a token with the
+# `workflow` scope, or do it in the GitHub web UI: Add file > Create new file > .github/workflows/tests.yml).
+name: tests
+on:
+  push:
+  pull_request:
+jobs:
+  suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install Playwright, Chromium and ffmpeg
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Run all suites (headless, offline except a one-time Idiomorph fetch)
+        run: python3 tests/run.py --no-online
+      - name: Upload failure bundles
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-bundles
+          path: tests/failures/
+          if-no-files-found: ignore
+  online:
+    # Real jsDelivr + axe-core. Allowed to fail (network, or the tag does not exist yet) so it never blocks a merge.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: |
+          pip install playwright
+          playwright install --with-deps chromium
+          sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: python3 tests/run.py -k online -k axe
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: failure-bundles-online, path: tests/failures/, if-no-files-found: ignore }
