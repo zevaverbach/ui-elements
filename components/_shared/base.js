@@ -17,7 +17,7 @@ export const baseCss = `
   --_muted: var(--ui-color-muted, light-dark(#5f6b7a, #8b949e));
   --_border: var(--ui-color-border, light-dark(#d0d7de, #30363d));
   --_accent: var(--ui-color-accent, light-dark(#1f6feb, #388bfd));
-  --_on-accent: var(--ui-color-on-accent, #ffffff);
+  --_on-accent: var(--ui-color-on-accent, light-dark(#ffffff, #0f1117));
   --_danger: var(--ui-color-danger, light-dark(#cf222e, #f85149));
   --_success: var(--ui-color-success, light-dark(#1a7f37, #3fb950));
   --_space: var(--ui-space, 12px);

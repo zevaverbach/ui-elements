@@ -18,7 +18,7 @@
   --ui-color-muted: light-dark(#5f6b7a, #8b949e);
   --ui-color-border: light-dark(#d0d7de, #30363d);
   --ui-color-accent: light-dark(#1f6feb, #388bfd);
-  --ui-color-on-accent: #ffffff;
+  --ui-color-on-accent: light-dark(#ffffff, #0f1117);
   --ui-color-danger: light-dark(#cf222e, #f85149);
   --ui-color-success: light-dark(#1a7f37, #3fb950);
 
