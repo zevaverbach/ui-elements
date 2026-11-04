@@ -1,0 +1,104 @@
+{
+  "name": "ui-elements",
+  "version": "0.1.0",
+  "repository": "https://github.com/zevaverbach/ui-elements",
+  "usage": "<script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/<file>\"></script> then use the tag. Optional theme: <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/tokens.css\">. Each module registers itself; load only what you use.",
+  "tokens": {
+    "file": "tokens.css",
+    "properties": [
+      "--ui-color-bg", "--ui-color-surface", "--ui-color-surface-2", "--ui-color-text", "--ui-color-muted",
+      "--ui-color-border", "--ui-color-accent", "--ui-color-on-accent", "--ui-color-danger", "--ui-color-success",
+      "--ui-space", "--ui-radius", "--ui-font", "--ui-font-size"
+    ],
+    "notes": "Optional. Components fall back to built-in light/dark values. Set data-theme=\"light|dark\" on <html> to force a scheme."
+  },
+  "shared": [
+    "components/_shared/util.js",
+    "components/_shared/base.js",
+    "components/_shared/speech.js",
+    "components/_shared/reorder.js"
+  ],
+  "components": [
+    {
+      "tag": "ui-todo-item",
+      "file": "components/ui-todo-item.js",
+      "description": "A single to-do item with checkbox, inline edit, confirm-to-delete, optional progress steps, a Web Speech microphone button (hidden where unsupported) and drag/keyboard/touch reordering among sibling items.",
+      "attributes": [
+        { "name": "text", "type": "string", "description": "Item text. Reflects to the text property." },
+        { "name": "checked", "type": "boolean", "description": "Item is done." },
+        { "name": "editing", "type": "boolean", "description": "Inline edit mode." },
+        { "name": "label", "type": "string", "description": "Small eyebrow label above the text." },
+        { "name": "progress", "type": "number 0-100", "description": "If present, shows four progress steps (25/50/75/100). Checking sets 100; unchecking from 100 sets 75." },
+        { "name": "lang", "type": "string", "description": "BCP-47 language for dictation. Default: document language." },
+        { "name": "no-speech", "type": "boolean", "description": "Never show the microphone button." },
+        { "name": "no-reorder", "type": "boolean", "description": "Hide the drag handle and disable reordering." },
+        { "name": "no-confirm", "type": "boolean", "description": "Delete on the first click instead of arm-then-confirm." }
+      ],
+      "properties": ["text", "checked", "editing", "progress"],
+      "methods": ["focusText()", "startEdit()", "cancelEdit()", "commitEdit()"],
+      "slots": [
+        { "name": "meta", "description": "Extra content under the text (tags, due date)." }
+      ],
+      "events": [
+        { "name": "ui-toggle", "detail": "{checked: boolean, progress: number|null}", "description": "Checked state changed." },
+        { "name": "ui-edit", "detail": "{text: string, previousText: string}", "description": "An edit was committed." },
+        { "name": "ui-delete", "detail": "{text: string}", "description": "Delete confirmed. Cancelable; if not prevented the element removes itself." },
+        { "name": "ui-transcript", "detail": "{text: string, final: boolean, value: string}", "description": "Speech-to-text result; value is the edit field after a final result is appended." },
+        { "name": "ui-progress", "detail": "{progress: number}", "description": "A progress step was chosen." },
+        { "name": "ui-reorder", "detail": "{from: number, to: number}", "description": "Item moved among sibling ui-todo-items; the DOM is already updated." }
+      ],
+      "cssCustomProperties": [
+        "--ui-todo-item-bg", "--ui-todo-item-border", "--ui-todo-item-radius", "--ui-todo-item-padding",
+        "--ui-todo-item-text", "--ui-todo-item-muted", "--ui-todo-item-accent", "--ui-todo-item-danger"
+      ],
+      "parts": ["row", "handle", "text", "edit-input", "mic", "delete"],
+      "composes-well-with": [],
+      "composed-in": ["ui-chat-panel (as slotted content, optional)"],
+      "notes": "Place several ui-todo-items under one parent (div/ul) to get a reorderable list; reordering applies to siblings with the same tag. Keyboard: Space/Enter on the handle grabs, Arrow keys move, Space/Enter drops, Escape cancels."
+    },
+    {
+      "tag": "ui-chat-panel",
+      "file": "components/ui-chat-panel.js",
+      "description": "A backend-agnostic chat panel that slides on and off the screen edge, with a message log, composer and a ui-send event for user messages.",
+      "attributes": [
+        { "name": "open", "type": "boolean", "description": "Panel is on screen." },
+        { "name": "side", "type": "right|left|bottom", "description": "Edge it slides from. Default right." },
+        { "name": "heading", "type": "string", "description": "Header title." },
+        { "name": "placeholder", "type": "string", "description": "Composer placeholder. Default \"Message…\"." },
+        { "name": "busy", "type": "boolean", "description": "Shows a pending bubble and disables Send." },
+        { "name": "busy-text", "type": "string", "description": "Pending bubble text. Default \"Thinking…\"." },
+        { "name": "backdrop", "type": "boolean", "description": "Show a scrim; clicking it closes the panel." },
+        { "name": "no-echo", "type": "boolean", "description": "Do not append the user's message to the log on send." }
+      ],
+      "properties": ["open", "heading", "busy", "messages (array of {role: user|agent|error, text})"],
+      "methods": ["toggle(force?) -> boolean", "show()", "hide()", "addMessage(role, text) -> HTMLElement", "clear()", "focusInput()"],
+      "slots": [
+        { "name": "(default)", "description": "Messages as light-DOM elements with data-role=\"user|agent|error\"." },
+        { "name": "header", "description": "Replaces the heading text." },
+        { "name": "actions", "description": "Extra header buttons before the close button." },
+        { "name": "footer", "description": "Content between the log and the composer." }
+      ],
+      "events": [
+        { "name": "ui-send", "detail": "{text: string}", "description": "User submitted a message. Cancelable: preventDefault keeps the draft." },
+        { "name": "ui-open", "detail": "{open: true}", "description": "Panel opened." },
+        { "name": "ui-close", "detail": "{open: false}", "description": "Panel closed." }
+      ],
+      "cssCustomProperties": [
+        "--ui-chat-panel-width", "--ui-chat-panel-height", "--ui-chat-panel-bg", "--ui-chat-panel-border",
+        "--ui-chat-panel-user-bg", "--ui-chat-panel-user-text", "--ui-chat-panel-agent-bg",
+        "--ui-chat-panel-z", "--ui-chat-panel-duration"
+      ],
+      "parts": ["panel", "header", "log", "message", "composer", "input", "send", "backdrop"],
+      "composes-well-with": [],
+      "composed-in": [],
+      "notes": "Toggle from any button with panel.toggle(). Slide animation is disabled under prefers-reduced-motion. Never makes network calls: the host listens for ui-send and calls addMessage('agent', ...)."
+    }
+  ],
+  "compositions": [
+    {
+      "name": "To-do list beside a chat",
+      "description": "A reorderable list is several ui-todo-item siblings in one container; a ui-chat-panel sits at the page level and is toggled by any button. Wire ui-transcript or ui-send to your own logic.",
+      "html": "<div id=\"list\"><ui-todo-item text=\"One\"></ui-todo-item><ui-todo-item text=\"Two\"></ui-todo-item></div><button onclick=\"chat.toggle()\">Chat</button><ui-chat-panel id=\"chat\" heading=\"Assistant\"></ui-chat-panel>"
+    }
+  ]
+}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ui-elements demo</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body { margin: 0; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); line-height: 1.5; }
+  main { max-width: 44rem; margin: 0 auto; padding: 1rem 16px 4rem; }
+  h1 { font-size: 1.4rem; } h2 { font-size: 1.1rem; margin-top: 2.2rem; border-bottom: 1px solid var(--ui-color-border); padding-bottom: .3rem; }
+  p.note { color: var(--ui-color-muted); font-size: .9rem; margin: .3rem 0 .8rem; }
+  .stack { display: grid; gap: .5rem; }
+  .bar { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; }
+  button.demo, .bar input { font: inherit; padding: .45rem .8rem; border-radius: var(--ui-radius); border: 1px solid var(--ui-color-border); background: var(--ui-color-surface); color: inherit; }
+  button.demo { cursor: pointer; } button.demo.primary { background: var(--ui-color-accent); color: var(--ui-color-on-accent); border-color: transparent; }
+  .bar input { flex: 1; min-width: 12rem; }
+  pre#log { background: var(--ui-color-surface-2); border: 1px solid var(--ui-color-border); border-radius: var(--ui-radius); padding: .6rem; max-height: 10rem; overflow: auto; font-size: .8rem; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ui-elements</h1>
+  <p class="note">Every component is loaded by relative path below. Serve this folder over http(s) (e.g. <code>python3 -m http.server</code> from the repo root, then open <code>/demo/</code>); ES modules do not load from <code>file://</code>. Speech needs a browser with the Web Speech API and a secure context.</p>
+  <div class="bar"><button class="demo" id="theme">Toggle dark / light</button></div>
+
+  <h2>ui-todo-item</h2>
+  <p class="note">Check, double-click text (or ✎) to edit, ✕ twice to delete, 🎤 to dictate (hidden if unsupported). Drag the grip, or focus it and press Space, then arrow keys, then Space.</p>
+  <div class="stack" id="single">
+    <ui-todo-item text="A plain item"></ui-todo-item>
+    <ui-todo-item text="Done item" checked></ui-todo-item>
+    <ui-todo-item text="Item with progress steps" label="Medium" progress="50"></ui-todo-item>
+    <ui-todo-item text="Item with a meta slot"><small slot="meta">Due tomorrow</small></ui-todo-item>
+  </div>
+
+  <h2>ui-chat-panel</h2>
+  <p class="note">Slides in from the right edge (slides are instant under <code>prefers-reduced-motion</code>). It has no backend: this page echoes a canned reply from the <code>ui-send</code> handler.</p>
+  <div class="bar">
+    <button class="demo primary" id="toggle-chat-1">Toggle chat</button>
+    <button class="demo" id="chat-left">Open from the left</button>
+  </div>
+
+  <h2>Composed: a to-do list inside a page with the chat toggled from a button</h2>
+  <p class="note">New items can be typed or dictated. Chat knows your list: ask "how many left?"</p>
+  <div class="bar">
+    <input id="new-text" placeholder="Add an item…" aria-label="New item text">
+    <button class="demo primary" id="add">Add</button>
+    <button class="demo" id="toggle-chat-2">💬 Chat</button>
+  </div>
+  <div class="stack" id="list">
+    <ui-todo-item text="Draft the release notes"></ui-todo-item>
+    <ui-todo-item text="Review the open pull requests"></ui-todo-item>
+    <ui-todo-item text="Book the dentist" checked></ui-todo-item>
+  </div>
+
+  <h2>Event log</h2>
+  <pre id="log" aria-live="off">(events appear here)</pre>
+</main>
+
+<ui-chat-panel id="chat" heading="Assistant" placeholder="Ask about your list…" backdrop>
+  <div data-role="agent">Hi! I can see your to-do list. Try "how many left?".</div>
+</ui-chat-panel>
+<ui-chat-panel id="chat-l" side="left" heading="Left chat"></ui-chat-panel>
+
+<script type="module" src="../components/ui-todo-item.js"></script>
+<script type="module" src="../components/ui-chat-panel.js"></script>
+<script type="module">
+  const $ = (s) => document.querySelector(s);
+  const log = $('#log');
+  const note = (name, detail) => {
+    log.textContent = (log.textContent.startsWith('(') ? '' : log.textContent + '\n') + `${name} ${JSON.stringify(detail)}`;
+    log.scrollTop = log.scrollHeight;
+  };
+  for (const n of ['ui-toggle', 'ui-edit', 'ui-delete', 'ui-transcript', 'ui-progress', 'ui-reorder', 'ui-send', 'ui-open', 'ui-close'])
+    document.addEventListener(n, (e) => note(n, e.detail));
+
+  $('#theme').onclick = () => {
+    const root = document.documentElement;
+    const dark = (root.dataset.theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) === 'dark';
+    root.dataset.theme = dark ? 'light' : 'dark';
+  };
+
+  const chat = $('#chat');
+  $('#toggle-chat-1').onclick = () => chat.toggle();
+  $('#toggle-chat-2').onclick = () => chat.toggle();
+  $('#chat-left').onclick = () => $('#chat-l').toggle();
+  $('#chat-l').addEventListener('ui-send', (e) => $('#chat-l').addMessage('agent', `You said: ${e.detail.text}`));
+
+  chat.addEventListener('ui-send', (e) => {
+    const items = [...document.querySelectorAll('#list ui-todo-item')];
+    const left = items.filter((i) => !i.checked);
+    chat.busy = true;
+    setTimeout(() => {
+      chat.busy = false;
+      chat.addMessage('agent', /left|remain|todo/i.test(e.detail.text)
+        ? `${left.length} left: ${left.map((i) => i.text).join(', ') || 'nothing 🎉'}`
+        : `You said: ${e.detail.text}`);
+    }, 600);
+  });
+
+  const input = $('#new-text');
+  const add = () => {
+    const text = input.value.trim();
+    if (!text) return;
+    const item = document.createElement('ui-todo-item');
+    item.text = text;
+    $('#list').prepend(item);
+    input.value = '';
+  };
+  $('#add').onclick = add;
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+</script>
+</body>
+</html>
