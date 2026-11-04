@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>store test</title>
+<style>body{font:14px/1.5 system-ui;margin:1rem}.pass{color:#1a7f37}.fail{color:#cf222e;font-weight:700}</style></head>
+<body>
+<h1>store, ui-each and action assertions</h1>
+<ul id="out"></ul>
+
+<!-- the shell: stores outside the outlet -->
+<ui-store id="s-a" name="a"><script type="application/json">{"items":[{"id":"1","text":"one","done":false},{"id":"2","text":"two","done":false}],"settings":{"theme":"dark"}}</script></ui-store>
+<ui-store id="s-p" name="persisted" persist="local" version="1"><script type="application/json">{"n":1}</script></ui-store>
+<main id="outlet"></main>
+
+<script type="module">
+  import '../components/ui-store.js';
+  import '../components/ui-each.js';
+  import '../components/ui-todo-item.js';
+  import { swapOutlet } from '../components/_shared/outlet.js';
+  import { get, set, dispatch, subscribe, ensureStore } from '../components/_shared/store-registry.js';
+
+  const results = (window.__results = []);
+  const check = (name, ok) => {
+    results.push({ name, ok: !!ok });
+    const li = document.createElement('li'); li.className = ok ? 'pass' : 'fail'; li.textContent = `${ok ? 'PASS' : 'FAIL'}: ${name}`;
+    document.getElementById('out').append(li);
+  };
+  const tick = () => new Promise((r) => setTimeout(r, 10));
+  const ids = () => [...document.querySelectorAll('#each ui-todo-item')].map((e) => e.dataset.eachKey);
+  const A = document.getElementById('s-a');
+
+  localStorage.removeItem('ui-store:b'); localStorage.removeItem('ui-store:persisted');
+  await tick();
+
+  // ---- registry basics
+  check('inline seed read', get('a', 'items').length === 2);
+  check('dot path read', get('a', 'settings.theme') === 'dark');
+  check('empty path reads root', Array.isArray(get('a', '').items));
+  const before = get('a', '');
+  set('a', 'settings.theme', 'light');
+  check('set replaces branch, root is a new object', get('a', 'settings.theme') === 'light' && get('a', '') !== before && before.settings.theme === 'dark');
+  check('untouched branch keeps identity', get('a', 'items') === before.items);
+
+  let calls = 0; const off = subscribe('a', () => calls++);
+  set('a', 'x', 1); set('a', 'y', 2); set('a', 'z', 3);
+  await tick();
+  check('subscribers notified once per microtask batch', calls === 1);
+  off(); set('a', 'x', 4); await tick();
+  check('unsubscribe works', calls === 1);
+
+  let late = null; subscribe('late', (d) => (late = d));
+  ensureStore('late', { seed: { v: 1 } }); await tick();
+  check('subscribe before store exists is notified on creation', late && late.name === 'late' && late.data.v === 1);
+  ensureStore('late', { seed: { v: 2 } });
+  check('existing store ignores a second seed', get('late', 'v') === 1);
+
+  // ---- actions
+  dispatch('a', 'add', { item: { text: 'three', done: false } });
+  const three = get('a', 'items')[2];
+  check('add assigns an id', three.text === 'three' && typeof three.id === 'string' && three.id.length > 8);
+  dispatch('a', 'add', { item: { id: 'z', text: 'first' }, index: 0 });
+  check('add at index', get('a', 'items')[0].id === 'z');
+  dispatch('a', 'update', { id: 'z', patch: { text: 'FIRST' } });
+  check('update merges patch', get('a', 'items')[0].text === 'FIRST');
+  dispatch('a', 'toggle', { id: 'z', field: 'done' });
+  check('toggle flips', get('a', 'items')[0].done === true);
+  dispatch('a', 'move', { id: 'z', toIndex: 2 });
+  check('move reorders (final index)', get('a', 'items')[2].id === 'z');
+  dispatch('a', 'remove', { id: 'z' });
+  check('remove', !get('a', 'items').some((i) => i.id === 'z'));
+  dispatch('a', 'set', { path: 'settings.theme', value: 'blue' });
+  check('set action', get('a', 'settings.theme') === 'blue');
+  dispatch('a', 'clear', {});
+  check('clear empties the array', get('a', 'items').length === 0);
+  check('unknown store returns false', dispatch('nope', 'add', {}) === false);
+  check('unknown action returns false', dispatch('a', 'explode', {}) === false);
+  dispatch('a', 'add', { item: { id: 'p', text: 'p' }, path: 'other.list' });
+  check('actions honor payload.path', get('a', 'other.list').length === 1);
+  set('a', '', { items: [{ id: '1', text: 'one', done: false }, { id: '2', text: 'two', done: false }] });
+  await tick();
+
+  // ---- ui-each inside the outlet, ui-action from the outlet reaching the shell store
+  const EACH = `<ui-each id="each" store="a" tag="ui-todo-item" map='{"text":"text","checked":"done"}'
+     events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-delete":{"action":"remove"},"ui-reorder":{"action":"move"}}'></ui-each>`;
+  await swapOutlet(EACH);
+  await tick();
+  check('ui-each renders a child per item', ids().join() === '1,2');
+  check('children get <each id>-<key> ids', document.getElementById('each-1')?.localName === 'ui-todo-item');
+  check('map applies attributes', document.getElementById('each-1').getAttribute('text') === 'one');
+
+  document.getElementById('each-1').shadowRoot.querySelector('.check').click();
+  await tick();
+  check('child ui-toggle becomes a toggle action in the shell store', get('a', 'items')[0].done === true);
+  check('checked attribute reflects the store', document.getElementById('each-1').hasAttribute('checked'));
+
+  const el1 = document.getElementById('each-1');
+  dispatch('a', 'add', { item: { id: '3', text: 'three' } }); await tick();
+  check('reconcile keeps existing element instances', document.getElementById('each-1') === el1 && ids().join() === '1,2,3');
+  dispatch('a', 'move', { id: '3', toIndex: 0 }); await tick();
+  check('reconcile reorders', ids().join() === '3,1,2');
+  check('reordered elements are still the same instances', document.getElementById('each-1') === el1);
+
+  // cancelled delete must not dispatch the action
+  const veto = (e) => e.preventDefault();
+  document.addEventListener('ui-delete', veto);
+  const del = document.getElementById('each-2').shadowRoot.querySelector('.del');
+  document.getElementById('each-2').setAttribute('no-confirm', '');
+  del.click(); await tick();
+  document.removeEventListener('ui-delete', veto);
+  check('cancelled ui-delete does not dispatch remove', get('a', 'items').some((i) => i.id === '2') && !!document.getElementById('each-2'));
+  del.click(); await tick();
+  check('uncancelled ui-delete removes the item from the store', !get('a', 'items').some((i) => i.id === '2'));
+  check('and the child is gone', !document.getElementById('each-2'));
+
+  // ---- swapping preserves instances and state
+  const keep = document.getElementById('each-1');
+  await swapOutlet(`<div id="wrap"><p>layout B</p>${EACH}</div>`); await tick();
+  check('swap into a new layout keeps ui-each children (same instances)', document.getElementById('each-1') === keep && ids().length === 2);
+  check('data survives swaps', get('a', 'items').length === 2);
+
+  // ---- removing and re-adding a <ui-store> keeps data
+  set('a', 'marker', 'kept');
+  A.remove();
+  check('data present while element is removed', get('a', 'marker') === 'kept');
+  document.body.append(A); await tick();
+  check('data present after element re-added (seed not re-applied)', get('a', 'marker') === 'kept' && get('a', 'items').length === 2);
+
+  // ---- events from the element
+  let ready = 0, changes = [];
+  const fresh = document.createElement('ui-store');
+  fresh.setAttribute('name', 'ev'); fresh.addEventListener('ui-store-ready', () => ready++); fresh.addEventListener('ui-store-change', (e) => changes.push(e.detail));
+  document.body.append(fresh); await tick();
+  check('ui-store-ready fires once after connect', ready === 1);
+  fresh.set('k', 1); await tick();
+  check('ui-store-change detail {name, path, data}', changes.length === 1 && changes[0].name === 'ev' && changes[0].path === 'k' && changes[0].data.k === 1);
+  fresh.remove();
+  const warn = console.warn; let warned = 0; console.warn = () => warned++;
+  const noName = document.createElement('ui-store'); document.body.append(noName); noName.remove();
+  console.warn = warn;
+  check('ui-store without a name warns', warned === 1);
+
+  // ---- persistence + version
+  const P = document.getElementById('s-p');
+  P.set('n', 2); await new Promise((r) => setTimeout(r, 350));
+  const raw = JSON.parse(localStorage.getItem('ui-store:persisted') || 'null');
+  check('persist=local writes {v, data} (debounced)', raw && raw.v === '1' && raw.data.n === 2);
+  localStorage.setItem('ui-store:vtest', JSON.stringify({ v: '1', data: { n: 'old' } }));
+  const v2 = document.createElement('ui-store'); v2.setAttribute('name', 'vtest'); v2.setAttribute('persist', 'local'); v2.setAttribute('version', '2');
+  v2.innerHTML = '<script type="application/json">{"n":"seed"}<\/script>'; document.body.append(v2); await tick();
+  check('stored data with a different version is ignored (seed used)', get('vtest', 'n') === 'seed');
+  localStorage.setItem('ui-store:vtest2', JSON.stringify({ v: '1', data: { n: 'stored' } }));
+  const v3 = document.createElement('ui-store'); v3.setAttribute('name', 'vtest2'); v3.setAttribute('persist', 'local');
+  v3.innerHTML = '<script type="application/json">{"n":"seed"}<\/script>'; document.body.append(v3); await tick();
+  check('persisted data beats inline seed', get('vtest2', 'n') === 'stored');
+  const sOnly = document.createElement('ui-store'); sOnly.setAttribute('name', 'broken'); sOnly.setAttribute('src', '/does-not-exist.json'); document.body.append(sOnly);
+  await ensureStore('broken').ready;
+  check('src fetch failure is non-fatal', get('broken', '') != null);
+  sOnly.remove(); v2.remove(); v3.remove();
+  for (const k of ['vtest', 'vtest2', 'persisted']) localStorage.removeItem('ui-store:' + k);
+
+  const failed = results.filter((r) => !r.ok).length;
+  document.title = failed ? `FAIL (${failed})` : `PASS (${results.length})`;
+</script>
+</body>
+</html>

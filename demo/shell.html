@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ui-elements stable shell demo</title>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  body { margin: 0; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); line-height: 1.5; }
+  .shell { max-width: 50rem; margin: 0 auto; padding: 1rem 16px 4rem; }
+  h1 { font-size: 1.3rem; margin: 0 0 .25rem; } h2 { font-size: 1rem; margin: .2rem 0 .5rem; }
+  p.note { color: var(--ui-color-muted); font-size: .85rem; margin: .2rem 0 .8rem; }
+  .bar { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0; align-items: center; }
+  button, input, textarea { font: inherit; color: inherit; background: var(--ui-color-surface); border: 1px solid var(--ui-color-border); border-radius: var(--ui-radius); padding: .4rem .75rem; }
+  button { cursor: pointer; } button.primary { background: var(--ui-color-accent); color: var(--ui-color-on-accent); border-color: transparent; }
+  input[type=text] { flex: 1; min-width: 10rem; }
+  #outlet { border: 2px dashed var(--ui-color-border); border-radius: var(--ui-radius); padding: .75rem; max-height: 22rem; overflow: auto; }
+  #outlet .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  #outlet ui-each, #outlet .list { display: contents; }
+  .list-wrap { display: grid; gap: .4rem; }
+  #status { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--ui-color-muted); }
+  textarea { width: 100%; min-height: 8rem; font-family: ui-monospace, monospace; font-size: .8rem; }
+  @media (max-width: 560px) { #outlet .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<!-- ============ THE STABLE SHELL: never swapped ============ -->
+<div class="shell">
+  <h1>Stable shell</h1>
+  <p class="note">The dashed box is the only region that is ever swapped. Stores and the chat panel live outside it, so layouts change without a reload, without losing to-dos, focus, caret or scroll. Serve over http (<code>python3 -m http.server</code>) and open <code>/demo/shell.html</code>.</p>
+
+  <ui-store id="store-todos" name="todos" persist="local">
+    <script type="application/json">{"items":[
+      {"id":"t1","text":"Draft the release notes","done":false},
+      {"id":"t2","text":"Review the open pull requests","done":false},
+      {"id":"t3","text":"Book the dentist","done":true},
+      {"id":"t4","text":"Water the plants","done":false},
+      {"id":"t5","text":"Call the plumber","done":false},
+      {"id":"t6","text":"Renew the passport","done":false},
+      {"id":"t7","text":"Back up the laptop","done":true},
+      {"id":"t8","text":"Plan the weekend","done":false},
+      {"id":"t9","text":"Fix the bike tyre","done":false},
+      {"id":"t10","text":"Reply to the landlord","done":false}
+    ]}</script>
+  </ui-store>
+  <ui-store id="store-chat" name="chat" persist="local">
+    <script type="application/json">{"messages":[{"role":"agent","text":"Hi! Your to-dos live in a store, so I can still see them after a layout swap."}]}</script>
+  </ui-store>
+
+  <div class="bar" role="toolbar" aria-label="Layouts">
+    <button data-layout="single">Single column</button>
+    <button data-layout="columns">Two columns</button>
+    <button data-layout="open">Open only</button>
+    <button id="toggle-store">Remove &amp; re-add store element</button>
+    <button id="reset">Reset data</button>
+    <button id="chat-btn" class="primary">💬 Chat</button>
+  </div>
+  <div id="status" aria-live="polite"></div>
+
+  <!-- The ONLY swappable region -->
+  <main id="outlet">
+    <div id="layout">
+      <div class="bar"><input id="new-todo" type="text" placeholder="Add a to-do…" aria-label="New to-do"><button class="primary" data-add-from="new-todo">Add</button></div>
+      <div class="list-wrap">
+        <ui-each id="todos" store="todos" tag="ui-todo-item"
+                 map='{"text":"text","checked":"done"}'
+                 events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-reorder":{"action":"move"},"ui-delete":{"action":"remove"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}}}'></ui-each>
+      </div>
+    </div>
+  </main>
+
+  <h2 style="margin-top:1.5rem">Agent playground</h2>
+  <p class="note">Edit the HTML and swap it in. Scripts, <code>on*</code> handlers and <code>javascript:</code> URLs are stripped first.</p>
+  <textarea id="playground" aria-label="HTML to swap into the outlet"></textarea>
+  <div class="bar"><button id="swap-playground" class="primary">Swap this HTML in</button></div>
+
+  <ui-chat-panel id="chat" store="chat" heading="Assistant" placeholder="Try: how many left?"></ui-chat-panel>
+</div>
+
+<script type="module" src="../components/ui-store.js"></script>
+<script type="module" src="../components/ui-each.js"></script>
+<script type="module" src="../components/ui-todo-item.js"></script>
+<script type="module" src="../components/ui-chat-panel.js"></script>
+<script type="module">
+  import { swapOutlet } from '../components/_shared/outlet.js';
+  import { get, set } from '../components/_shared/store-registry.js';
+
+  const EACH = (where = '') => `<ui-each id="todos" store="todos" tag="ui-todo-item"${where ? ` where='${where}'` : ''}
+    map='{"text":"text","checked":"done"}'
+    events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-reorder":{"action":"move"},"ui-delete":{"action":"remove"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}}}'></ui-each>`;
+  const ADD = `<div class="bar"><input id="new-todo" type="text" placeholder="Add a to-do…" aria-label="New to-do"><button class="primary" data-add-from="new-todo">Add</button></div>`;
+  const LAYOUTS = {
+    single: `<div id="layout">${ADD}<div class="list-wrap">${EACH()}</div></div>`,
+    open: `<div id="layout"><h2>Open only</h2>${ADD}<div class="list-wrap">${EACH('{"done":false}')}</div></div>`,
+    // different ui-each ids on purpose: two lists, each filtered
+    columns: `<div id="layout"><div class="cols">
+        <section><h2>Open</h2>${ADD}<div class="list-wrap">${EACH('{"done":false}').replace('id="todos"', 'id="open"')}</div></section>
+        <section><h2>Done</h2><div class="list-wrap">${EACH('{"done":true}').replace('id="todos"', 'id="done"')}</div></section>
+      </div></div>`,
+  };
+  const $ = (s) => document.querySelector(s);
+  const pg = $('#playground');
+  const show = (name) => { pg.value = LAYOUTS[name]; return swapOutlet(LAYOUTS[name]); };
+  pg.value = LAYOUTS.single;
+
+  document.addEventListener('click', (e) => {
+    const layout = e.target.closest('[data-layout]');
+    if (layout) show(layout.dataset.layout);
+    const add = e.target.closest('[data-add-from]');
+    if (add) addFrom(document.getElementById(add.dataset.addFrom));
+  });
+  // Shell-level wiring for the add field: swapped HTML contains no script, so the shell owns the behavior.
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.id === 'new-todo') addFrom(e.target);
+  });
+  function addFrom(input) {
+    const text = input?.value.trim();
+    if (!text) return;
+    $('#store-todos').act('add', { item: { text, done: false }, index: 0 });
+    input.value = '';
+    input.focus();
+  }
+
+  $('#swap-playground').onclick = () => swapOutlet(pg.value);
+  $('#chat-btn').onclick = () => $('#chat').toggle();
+  $('#reset').onclick = () => { localStorage.removeItem('ui-store:todos'); localStorage.removeItem('ui-store:chat'); location.reload(); };
+
+  // Acceptance check 2: the store element can be removed and re-added without losing data.
+  let removed = null;
+  $('#toggle-store').onclick = () => {
+    const btn = $('#toggle-store');
+    if (!removed) { removed = $('#store-todos'); removed.remove(); btn.textContent = 'Re-add store element'; }
+    else { document.querySelector('.bar').after(removed); removed = null; btn.textContent = 'Remove & re-add store element'; }
+    status();
+  };
+
+  const status = () => { $('#status').textContent = `todos: ${(get('todos', 'items') || []).length} items, ${(get('todos', 'items') || []).filter((i) => !i.done).length} open · store element ${removed ? 'REMOVED' : 'present'}`; };
+  document.addEventListener('ui-store-change', status);
+  document.addEventListener('ui-store-ready', status);
+  status();
+
+  // The chat is backend-free: reply from the store when the user sends a message.
+  $('#chat').addEventListener('ui-send', (e) => {
+    const open = (get('todos', 'items') || []).filter((i) => !i.done);
+    const text = /left|open|how many/i.test(e.detail.text) ? `${open.length} open: ${open.map((i) => i.text).join(', ') || 'nothing 🎉'}` : `You said: ${e.detail.text}`;
+    setTimeout(() => set('chat', 'messages', [...get('chat', 'messages'), { id: crypto.randomUUID(), role: 'agent', text }]), 300);
+  });
+</script>
+</body>
+</html>

@@ -17,6 +17,10 @@
 //   backdrop     boolean  show a scrim behind the panel; clicking it closes the panel
 //   no-echo      boolean  do not append the user's message to the log on send (host renders it itself)
 //   messages     property array of {role: "user"|"agent"|"error", text: string}; get/set
+//   store        string   optional: name of a <ui-store>. Messages are then rendered from the store
+//                         (array at `store-path`) and a sent message becomes an `add` ui-action with
+//                         {role: "user", text} instead of being echoed locally. Without it nothing changes.
+//   store-path   string   dot path of the messages array in the store, default "messages"
 //
 // Methods: toggle(force?) -> boolean, show(), hide(), addMessage(role, text) -> HTMLElement,
 //   clear(), focusInput()
@@ -29,6 +33,8 @@
 //   footer       content between the log and the composer (suggestions, status)
 //
 // Events (bubble, composed):
+//   ui-action  {store, action: "add", payload: {path, item: {role: "user", text}}}   only when `store` is set;
+//                               routed to the store by the store registry (see ui-store)
 //   ui-send    {text: string}   user submitted (Enter, or Send; Shift+Enter inserts a newline).
 //                               Cancelable: preventDefault() keeps the draft in the box.
 //   ui-open    {open: true}     panel finished opening state change
@@ -46,6 +52,7 @@
 
 import { emit, define, coarsePointer } from './_shared/util.js';
 import { sheet } from './_shared/base.js';
+import { get, subscribe } from './_shared/store-registry.js';
 
 const styles = sheet(`
 :host { position: fixed; inset: 0; z-index: var(--ui-chat-panel-z, 1000); pointer-events: none; --_dur: var(--ui-chat-panel-duration, 250ms); }
@@ -81,7 +88,7 @@ textarea { flex: 1; min-width: 0; max-height: 9rem; resize: none; font: inherit;
 `);
 
 export class UiChatPanel extends HTMLElement {
-  static observedAttributes = ['open', 'heading', 'placeholder', 'busy', 'busy-text'];
+  static observedAttributes = ['open', 'heading', 'placeholder', 'busy', 'busy-text', 'store', 'store-path'];
 
   constructor() {
     super();
@@ -123,8 +130,12 @@ export class UiChatPanel extends HTMLElement {
     this.shadowRoot.querySelector('slot:not([name])').addEventListener('slotchange', () => this._scroll());
   }
 
-  connectedCallback() { this._sync(); }
-  attributeChangedCallback() { this._sync(); }
+  connectedCallback() { this._sync(); this._bindStore(); }
+  disconnectedCallback() { this._unsub?.(); this._unsub = null; this._bound = null; }
+  attributeChangedCallback(name) {
+    this._sync();
+    if (name === 'store' || name === 'store-path') this._bindStore();
+  }
 
   // ---- properties ----
   get open() { return this.hasAttribute('open'); }
@@ -189,12 +200,32 @@ export class UiChatPanel extends HTMLElement {
     emit(this, open ? 'ui-open' : 'ui-close', { open });
   }
 
+  // Optional store binding: render messages from the store. Inert unless the `store` attribute is set.
+  _bindStore() {
+    if (!this.isConnected) return;
+    const store = this.getAttribute('store');
+    const path = this.getAttribute('store-path') || 'messages';
+    const bound = store ? `${store}\u0000${path}` : null;
+    if (bound === this._bound) return;
+    this._unsub?.(); this._unsub = null; this._bound = bound;
+    if (!store) return;
+    const render = () => {
+      const list = get(store, path);
+      this.messages = Array.isArray(list) ? list : [];
+    };
+    this._unsub = subscribe(store, render);
+    render();
+  }
+
   _submit() {
     const text = this._input.value.trim();
     if (!text || this.busy) return;
     const ev = emit(this, 'ui-send', { text }, { cancelable: true });
     if (ev.defaultPrevented) return;
-    if (!this.hasAttribute('no-echo')) this.addMessage('user', text);
+    const store = this.getAttribute('store');
+    if (store) {
+      emit(this, 'ui-action', { store, action: 'add', payload: { path: this.getAttribute('store-path') || 'messages', item: { role: 'user', text } } });
+    } else if (!this.hasAttribute('no-echo')) this.addMessage('user', text);
     this._input.value = '';
     this._autosize();
   }

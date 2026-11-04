@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>sanitizer test</title>
+<style>body{font:14px/1.5 system-ui;margin:1rem}.pass{color:#1a7f37}.fail{color:#cf222e;font-weight:700}</style></head>
+<body>
+<h1>sanitizer assertions</h1>
+<p>Open over http. Every line should be PASS. Results are also in <code>window.__results</code>.</p>
+<ul id="out"></ul>
+<script type="module">
+  import { sanitizeHtml, sanitizeFragment } from '../components/_shared/outlet.js';
+
+  const results = (window.__results = []);
+  const check = (name, ok) => {
+    results.push({ name, ok: !!ok });
+    const li = document.createElement('li');
+    li.className = ok ? 'pass' : 'fail';
+    li.textContent = `${ok ? 'PASS' : 'FAIL'}: ${name}`;
+    document.getElementById('out').append(li);
+  };
+  const frag = (h, o) => { const d = document.createElement('div'); d.append(sanitizeFragment(h, o)); return d; };
+
+  // script and friends
+  check('script element removed', !frag('<div>a<script>alert(1)</script>b</div>').querySelector('script'));
+  check('text around removed script survives', frag('<div>a<script>alert(1)</script>b</div>').textContent === 'ab');
+  for (const t of ['iframe', 'object', 'embed', 'style', 'link', 'meta', 'svg', 'form'])
+    check(`<${t}> removed`, !frag(`<div><${t}></${t}>x</div>`).querySelector(t));
+
+  // on* attributes
+  const d1 = frag('<ui-todo-item onclick="x()" onmouseover=x() ONFOCUS="x()" text="ok"></ui-todo-item><img src="a.png" onerror="x()">');
+  check('on* attributes removed (lower and upper case)', ![...d1.querySelectorAll('*')].some((e) => [...e.attributes].some((a) => a.name.toLowerCase().startsWith('on'))));
+  check('other attributes kept', d1.querySelector('ui-todo-item').getAttribute('text') === 'ok');
+
+  // javascript: URLs
+  for (const u of ['javascript:alert(1)', ' JaVa\tScRiPt:alert(1)', '\u0001javascript:alert(1)', 'vbscript:x', 'data:text/html,<b>x</b>'])
+    check(`bad URL removed: ${JSON.stringify(u)}`, !frag(`<a href="${u}">x</a>`).querySelector('a').hasAttribute('href'));
+  check('https URL kept', frag('<a href="https://example.com/">x</a>').querySelector('a').getAttribute('href') === 'https://example.com/');
+  check('relative URL kept', frag('<a href="#x">x</a>').querySelector('a').hasAttribute('href'));
+  check('data:image/png URL kept', frag('<img src="data:image/png;base64,AAAA">').querySelector('img').hasAttribute('src'));
+  check('srcdoc removed', !frag('<div srcdoc="x">a</div>').firstElementChild.hasAttribute('srcdoc'));
+
+  // ui-* tags survive
+  const d2 = frag('<ui-chat-panel heading="x"><div data-role="agent">hi</div></ui-chat-panel><ui-each store="a" tag="ui-todo-item"></ui-each>');
+  check('ui-* tags survive', d2.querySelector('ui-chat-panel') && d2.querySelector('ui-each'));
+  check('ui-* attributes survive', d2.querySelector('ui-chat-panel').getAttribute('heading') === 'x');
+  check('nested layout tags survive', d2.querySelector('ui-chat-panel > div[data-role="agent"]'));
+
+  // allowlist
+  check('unknown custom element removed when allowlist given', !frag('<x-evil>t</x-evil><ui-nope></ui-nope>', { allowedTags: ['ui-store'] }).querySelector('x-evil, ui-nope'));
+  check('unknown element is unwrapped (text kept)', frag('<blink>keep</blink>').textContent === 'keep');
+  check('allowlisted custom element kept', frag('<ui-store name="a"></ui-store>', { allowedTags: ['ui-store'] }).querySelector('ui-store'));
+  check('non-ui custom elements dropped by default', !frag('<x-evil></x-evil>').querySelector('x-evil'));
+
+  // JSON seed exception
+  const d3 = frag('<ui-store name="a"><script type="application/json" onload="x()">{"items":[]}</script></ui-store>');
+  const seed = d3.querySelector('ui-store > script');
+  check('JSON seed script kept inside ui-store', seed && seed.textContent === '{"items":[]}');
+  check('JSON seed script loses other attributes', seed && !seed.hasAttribute('onload'));
+  check('JSON script outside ui-store removed', !frag('<div><script type="application/json">{}</script></div>').querySelector('script'));
+  check('JS script inside ui-store removed', !frag('<ui-store name="a"><script>alert(1)</script></ui-store>').querySelector('script'));
+
+  // misc
+  check('comments removed', !sanitizeHtml('<div><!-- x -->a</div>').includes('<!--'));
+  check('sanitizeHtml is idempotent', (() => { const h = '<div onclick="x()"><script>1</script><ui-each store="a" tag="b"></ui-each></div>'; const a = sanitizeHtml(h); return a === sanitizeHtml(a); })());
+  check('nested/tricky: <scr<script>ipt> cannot reassemble', !/<script/i.test(sanitizeHtml('<scr<script>ipt>alert(1)</scr</script>ipt>')));
+  check('no script elements run: window.__pwned stays unset', (sanitizeHtml('<img src=x onerror="window.__pwned=1"><script>window.__pwned=1<\/script>'), !window.__pwned));
+
+  const failed = results.filter((r) => !r.ok).length;
+  document.title = failed ? `FAIL (${failed})` : `PASS (${results.length})`;
+</script>
+</body>
+</html>
