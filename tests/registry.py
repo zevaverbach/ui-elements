@@ -38,6 +38,7 @@ class Env:
     base = ""          # http://127.0.0.1:<port>  (repo root)
     cdn = ""           # http://127.0.0.1:<port>  (repo root, jsDelivr layout + CORS)
     root = ""          # repo root on disk
+    pages = {}         # path -> html served from memory by the app server
     catalog = {}       # parsed components.json
     online = False
     idiomorph = None   # path to a cached copy of the pinned Idiomorph, or None

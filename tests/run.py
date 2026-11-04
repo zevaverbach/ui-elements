@@ -85,7 +85,7 @@ def main():
         return 0
 
     app, cdn = serve(ROOT), serve(ROOT, cdn_layout=True)
-    env.base, env.cdn, env.root = app.url, cdn.url, ROOT
+    env.base, env.cdn, env.root, env.pages = app.url, cdn.url, ROOT, app.pages
     env.catalog = json.load(open(os.path.join(ROOT, "components.json")))
     env.online = (not a.no_online) and online()
     env.idiomorph = ensure_idiomorph(env.online)

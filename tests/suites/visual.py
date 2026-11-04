@@ -1,0 +1,42 @@
+"""Suite G: light/dark screenshots of every demo page, and an axe-core accessibility pass (online only)."""
+import os
+from registry import test, env
+from helpers import check, eq
+
+PAGES = ["/demo/index.html", "/demo/shell.html", "/demo/sanitizer-test.html", "/demo/store-test.html"]
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "screenshots")
+AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
+LUMA = "(() => { const m = getComputedStyle(document.body).backgroundColor.match(/\\d+(\\.\\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; })()"
+
+@test("visual", "demo-pages-light-and-dark", needs_idiomorph=True, viewport={"width": 720, "height": 480})
+def _(t):
+    t.allow_console("Failed to load resource", "status of 404")
+    os.makedirs(OUT, exist_ok=True)
+    p = t.page
+    for path in PAGES:
+        t.goto(path); p.wait_for_timeout(500)
+        name = path.split("/")[-1][:-5]
+        lum = {}
+        for scheme in ("light", "dark"):
+            t.step(f"{name}: {scheme} mode")
+            p.emulate_media(color_scheme=scheme); p.wait_for_timeout(150)
+            lum[scheme] = p.evaluate(LUMA)
+            p.screenshot(path=os.path.join(OUT, f"{name}-{scheme}.png"))
+            over = p.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+            check(over <= 1, f"{name} ({scheme}) overflows horizontally by {over}px")
+        check(lum["light"] > 0.8, f"{name}: light page background is too dark ({lum['light']:.2f})")
+        check(lum["dark"] < 0.35, f"{name}: dark page background is too light ({lum['dark']:.2f})")
+        sizes = [os.path.getsize(os.path.join(OUT, f"{name}-{s}.png")) for s in ("light", "dark")]
+        check(min(sizes) > 3000 and sizes[0] != sizes[1], f"{name}: screenshots look blank or identical {sizes}")
+
+@test("visual", "axe-accessibility", online=True, needs_idiomorph=True, viewport={"width": 720, "height": 480})
+def _(t):
+    t.allow_console("Failed to load resource", "status of 404")
+    p = t.page
+    for path in ("/demo/index.html", "/demo/shell.html"):
+        t.step(f"axe-core on {path}")
+        t.goto(path); p.wait_for_timeout(700)
+        p.add_script_tag(url=AXE)
+        res = p.evaluate("async () => (await axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a', 'wcag2aa']}})).violations.map(v => ({id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.slice(0, 3).map(n => n.target.join(' '))}))")
+        serious = [v for v in res if v["impact"] in ("critical", "serious")]
+        check(not serious, f"{path}: axe found {len(serious)} serious violation(s): " + "; ".join(f"{v['id']} ({v['impact']}): {v['nodes']}" for v in serious))
