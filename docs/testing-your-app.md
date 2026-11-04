@@ -99,7 +99,7 @@ Also assert that hostile or sloppy HTML does not execute (no `window.__pwned`), 
 
 ### 5. Put it in CI
 
-Run the same command headless on every push and upload `tests/failures/` on failure. The workflow in this repo, [`tests/ci/tests.yml`](../tests/ci/tests.yml) (copy it to `.github/workflows/`), is a template: install Python, `pip install playwright`, `playwright install --with-deps chromium`, install ffmpeg, run the tests, `actions/upload-artifact` for the failures folder.
+Run the same command headless on every push and upload `tests/failures/` on failure. The workflow in this repo, [`tests/ci/tests.yml`](../tests/ci/tests.yml) (installed in this repo as `.github/workflows/tests.yml`; copy it to yours) runs on pull requests and on pushes to `main`. It does this: install Python, `pip install playwright`, `playwright install --with-deps chromium`, install ffmpeg, run the tests, `actions/upload-artifact` for the failures folder.
 
 ## Checklist for an agent that just built or changed a UI
 
