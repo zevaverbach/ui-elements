@@ -15,7 +15,9 @@ def _duration(src):
 
 def filmstrip(src, dst, frames=8, start=0.0, end=None, cols=3, width=420):
     frames = max(2, min(9, frames))
-    end = _duration(src) if end is None else end
+    total = _duration(src)
+    end = total if end is None else min(end, total)     # never ask for frames past the end of the video
+    start = min(start, max(0.0, end - 0.3))
     end = max(end, start + 0.2)
     times = [start + (end - start) * i / (frames - 1) for i in range(frames)]
     times[-1] = max(start, end - 0.08)          # the very last frame, not one past it
