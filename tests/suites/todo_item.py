@@ -7,7 +7,7 @@ EVENTS = ("ui-toggle", "ui-edit", "ui-delete", "ui-transcript", "ui-progress", "
 LIST = '<div id="list"><ui-todo-item id="a" text="Alpha"></ui-todo-item><ui-todo-item id="b" text="Bravo"></ui-todo-item><ui-todo-item id="c" text="Charlie"></ui-todo-item></div>'
 sh = lambda sel: f"ui-todo-item{sel}"   # Playwright CSS pierces open shadow roots
 
-@test("todo-item", "attributes-and-properties", component=C)
+@test("todo-item", "attributes-and-properties", desc='Attributes and properties stay in sync: `text`, `checked`, `label` (eyebrow), `progress` (steps) and the `editing` attribute.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy milk"></ui-todo-item>')
     t.step("Attribute `text` renders, property `text` reflects", "#a")
@@ -38,7 +38,7 @@ def _(t):
     mount(t, '<ui-todo-item id="m" text="x"><small slot="meta">Due soon</small></ui-todo-item>')
     check(p.evaluate("document.getElementById('m').shadowRoot.querySelector('slot[name=meta]').assignedNodes().length") == 1, "slotted node assigned")
 
-@test("todo-item", "toggle", component=C)
+@test("todo-item", "toggle", desc='Ticking the checkbox strikes the text through and emits ui-toggle; unticking reverses it.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy milk"></ui-todo-item>')
     t.capture_events(*EVENTS)
@@ -56,7 +56,7 @@ def _(t):
     eq(t.events("ui-toggle")[1]["detail"]["checked"], False)
     check(not t.page.evaluate("document.getElementById('a').checked"), "checked property is false")
 
-@test("todo-item", "progress-steps", component=C)
+@test("todo-item", "progress-steps", desc='Clicking progress steps sets the progress; clicking the active step steps back, 100% completes the item, and unticking restores the previous progress.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Write report" progress="0"></ui-todo-item>')
     t.capture_events(*EVENTS)
@@ -73,7 +73,7 @@ def _(t):
     t.page.click("#a .check")
     eq(t.page.evaluate("document.getElementById('a').progress"), 75)
 
-@test("todo-item", "inline-edit", component=C)
+@test("todo-item", "inline-edit", desc='Double-clicking the text edits it: Enter saves, Escape cancels, and an empty value is not saved.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy milk"></ui-todo-item>')
     t.capture_events(*EVENTS)
@@ -102,7 +102,7 @@ def _(t):
     p.wait_for_timeout(100)
     eq(p.inner_text("#a .text"), "Buy bread")
 
-@test("todo-item", "edit-field-is-focused-immediately", component=C)
+@test("todo-item", "edit-field-is-focused-immediately", desc='Regression test: the edit field is focused in the same task as startEdit(), so keystrokes typed right after clicking Edit are not lost.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy milk"></ui-todo-item>')
     p = t.page
@@ -118,7 +118,7 @@ def _(t):
       const e = a.shadowRoot.activeElement; return e ? e.className : null; }""")
     eq(active, "edit")
 
-@test("todo-item", "confirm-delete", component=C)
+@test("todo-item", "confirm-delete", desc='Delete takes two clicks (the first arms it and expires on its own), a vetoed ui-delete keeps the item, and a confirmed one removes it.', component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Alpha"></ui-todo-item><ui-todo-item id="b" text="Bravo"></ui-todo-item><ui-todo-item id="c" text="Charlie" no-confirm></ui-todo-item>')
     t.capture_events(*EVENTS)
@@ -146,7 +146,7 @@ def _(t):
     p.click("#c .del")
     check(p.locator("#c").count() == 0, "item c removed")
 
-@test("todo-item", "drag-reorder", component=C)
+@test("todo-item", "drag-reorder", desc="Dragging an item's grip with the mouse reorders the list and emits ui-reorder.", component=C)
 def _(t):
     open_fixture(t, LIST)
     t.capture_events(*EVENTS)
@@ -166,7 +166,7 @@ def _(t):
     eq(texts(p), ["Alpha", "Bravo", "Charlie"])
     eq(t.events("ui-reorder")[-1]["detail"], {"from": 2, "to": 0})
 
-@test("todo-item", "keyboard-reorder", component=C)
+@test("todo-item", "keyboard-reorder", desc="Space grabs an item's grip, arrows move it, Space drops it and Escape cancels the grab.", component=C)
 def _(t):
     open_fixture(t, LIST)
     t.capture_events(*EVENTS)
@@ -191,7 +191,7 @@ def _(t):
     p.focus("#b .handle"); p.keyboard.press("Space"); p.keyboard.press("ArrowUp"); p.keyboard.press("ArrowUp"); p.keyboard.press("Space")
     eq(texts(p), ["Bravo", "Charlie", "Alpha"], "nothing changes")
 
-@test("todo-item", "touch-reorder", component=C, has_touch=True, is_mobile=False)
+@test("todo-item", "touch-reorder", desc='Touch-dragging the grip reorders items (simulated touch events), and the grip opts out of touch scrolling.', component=C, has_touch=True, is_mobile=False)
 def _(t):
     open_fixture(t, LIST)
     t.capture_events(*EVENTS)
@@ -205,7 +205,7 @@ def _(t):
     t.step("The grip opts out of touch scrolling (touch-action: none)", "#a")
     eq(p.evaluate("getComputedStyle(document.getElementById('a').shadowRoot.querySelector('.handle')).touchAction"), "none")
 
-@test("todo-item", "speech-to-text", component=C, init_scripts=[SPEECH_MOCK])
+@test("todo-item", "speech-to-text", desc='With a mocked Web Speech API, the mic opens edit mode and starts listening; interim results emit ui-transcript without changing the field, and final results are appended.', component=C, init_scripts=[SPEECH_MOCK])
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy" lang="de-DE"></ui-todo-item>')
     t.capture_events(*EVENTS)
@@ -233,7 +233,7 @@ def _(t):
     p.click("#a .mic"); p.wait_for_timeout(50); p.click("#a .mic"); p.wait_for_timeout(100)
     check(p.evaluate("window.__speech.state.stopped") >= 1, "stop() was called")
 
-@test("todo-item", "speech-unsupported", component=C, init_scripts=[NO_SPEECH])
+@test("todo-item", "speech-unsupported", desc='Without the Web Speech API the mic button is hidden and the rest of the item still works.', component=C, init_scripts=[NO_SPEECH])
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy"></ui-todo-item>')
     p = t.page
@@ -244,13 +244,13 @@ def _(t):
     p.click("#a .check")
     check(p.evaluate("document.getElementById('a').checked"), "toggle works")
 
-@test("todo-item", "speech-opt-out", component=C, init_scripts=[SPEECH_MOCK])
+@test("todo-item", "speech-opt-out", desc='The `no-speech` attribute hides the mic even when the API exists.', component=C, init_scripts=[SPEECH_MOCK])
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Buy" no-speech></ui-todo-item>')
     t.step("`no-speech` hides the mic even when the API exists", "#a")
     check(t.page.locator("#a .mic").is_hidden(), "mic hidden by attribute")
 
-@test("todo-item", "accessibility", component=C, init_scripts=[SPEECH_MOCK])
+@test("todo-item", "accessibility", desc='Every control has an accessible name, and the Tab order is grip, checkbox, steps, mic, edit, delete.', component=C, init_scripts=[SPEECH_MOCK])
 def _(t):
     open_fixture(t, '<button id="before">before</button><ui-todo-item id="a" text="Buy milk" progress="25"></ui-todo-item>')
     p = t.page

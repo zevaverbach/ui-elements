@@ -21,6 +21,7 @@ class Spec:
     known_issue: str | None = None
     needs_idiomorph: bool = False
     gif: bool = True
+    desc: str = ""
     context: dict = field(default_factory=dict)
     init_scripts: list = field(default_factory=list)
 
@@ -28,9 +29,9 @@ class Spec:
     def full(self):
         return f"{self.suite}-{self.name}"
 
-def test(suite, name, component=None, online=False, known_issue=None, needs_idiomorph=False, init_scripts=(), gif=True, **context):
+def test(suite, name, component=None, online=False, known_issue=None, needs_idiomorph=False, init_scripts=(), gif=True, desc="", **context):
     def deco(fn):
-        TESTS.append(Spec(suite, name, fn, component, online, known_issue, needs_idiomorph, gif, context, list(init_scripts)))
+        TESTS.append(Spec(suite, name, fn, component, online, known_issue, needs_idiomorph, gif, desc, context, list(init_scripts)))
         return fn
     return deco
 

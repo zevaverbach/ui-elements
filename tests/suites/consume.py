@@ -27,7 +27,7 @@ def track(t):
     t.reqs = []
     t.page.on("response", lambda r: t.reqs.append((r.url, r.status)))
 
-@test("consume", "cdn-layout-and-relative-imports", viewport={"width": 640, "height": 300})
+@test("consume", "cdn-layout-and-relative-imports", desc='A blank page imports components from a jsDelivr-shaped URL: both elements define and render, the relative ./_shared imports resolve from the same path, and the component works.', viewport={"width": 640, "height": 300})
 def _(t):
     track(t)
     t.step("Blank page imports components by a jsDelivr-shaped URL")
@@ -51,7 +51,7 @@ def _(t):
     t.step("tokens.css loaded from the same path themes the page")
     eq(p.evaluate("getComputedStyle(document.documentElement).getPropertyValue('--ui-radius').trim()"), "8px")
 
-@test("consume", "catalog-matches-loaded-modules", viewport={"width": 640, "height": 300})
+@test("consume", "catalog-matches-loaded-modules", desc='components.json fetched from the CDN-style path lists modules that all load, and every catalog tag ends up defined.', viewport={"width": 640, "height": 300})
 def _(t):
     t.step("Fetch components.json from the CDN path and load every module it lists")
     cat = json.load(urllib.request.urlopen(f"{env.cdn}/gh/zevaverbach/ui-elements@{REF}/components.json"))
@@ -61,7 +61,7 @@ def _(t):
     t.step(f"All {len(tags)} catalog tags are defined: " + ", ".join(tags))
     eq(t.page.evaluate("(tags) => tags.filter((t) => !customElements.get(t))", tags), [])
 
-@test("consume", "swap-outlet-from-the-cdn-path", needs_idiomorph=True, viewport={"width": 640, "height": 300})
+@test("consume", "swap-outlet-from-the-cdn-path", desc='swapOutlet imported from the CDN-style path swaps an outlet correctly.', needs_idiomorph=True, viewport={"width": 640, "height": 300})
 def _(t):
     track(t)
     t.step("Import swapOutlet from the CDN-style path and swap an outlet")
@@ -78,7 +78,7 @@ def _(t):
     check(p.locator("#x").count() == 0, "tag missing from the catalog was removed: the catalog was fetched relative to outlet.js")
     check(any(u.endswith("/components.json") and u.startswith(env.cdn) for u, s in t.reqs), "components.json fetched from the CDN path")
 
-@test("consume", "online-real-jsdelivr", online=True, viewport={"width": 640, "height": 300})
+@test("consume", "online-real-jsdelivr", desc='Online check against the real jsDelivr: the pinned tag serves the module and its _shared imports.', online=True, viewport={"width": 640, "height": 300})
 def _(t):
     ref = os.environ.get("UI_ELEMENTS_TAG", REF)
     url = f"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@{ref}/components/ui-todo-item.js"

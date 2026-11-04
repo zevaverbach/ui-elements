@@ -69,7 +69,7 @@ CASES = [
     ("non-ui custom element dropped", '<x-evil>t</x-evil><ui-todo-item text="a"></ui-todo-item>',  ["x-evil"], ["<ui-todo-item"]),
 ]
 
-@test("sanitizer", "table-driven", init_scripts=[], viewport={"width": 640, "height": 420})
+@test("sanitizer", "table-driven", desc='A table of 51 markup cases: dangerous markup is removed, ui-* and layout tags are kept, and each case also inserted into a live page runs nothing.', init_scripts=[], viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource")   # surviving <img src="x"> / blocked external URLs are inserted for real
     open_fixture(t)
@@ -96,7 +96,7 @@ def _(t):
     t.step("Result: " + ("all cases pass" if not failures else f"{len(failures)} failing"))
     check(not failures, f"{len(failures)} sanitizer case(s) failed:\n  " + "\n  ".join(failures))
 
-@test("sanitizer", "allowlist-comes-from-the-catalog")
+@test("sanitizer", "allowlist-comes-from-the-catalog", desc='swapOutlet allows only the tags listed in components.json, and rejects a missing outlet with a clear error.')
 def _(t):
     open_fixture(t)
     p = t.page

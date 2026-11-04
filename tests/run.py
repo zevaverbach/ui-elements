@@ -80,15 +80,13 @@ def main():
     specs = [s for s in TESTS if (not a.suite or s.suite in a.suite) and (not a.keyword or a.keyword in s.full)]
     run_cat = (not a.suite or "catalog" in a.suite) and (not a.keyword or a.keyword in "catalog-integrity")
     if a.table:
-        import inspect, re as _re
         by_suite = {}
         for s in specs:
             by_suite.setdefault(s.suite, []).append(s)
         for suite, items in by_suite.items():
-            print(f"#### {suite}\n\n<details><summary>{len(items)} recorded tests</summary>\n\n| Test | What the recording shows | Recording |\n|---|---|---|")
+            print(f"#### {suite}\n\n<details><summary>{len(items)} tests</summary>\n\n| Test | What it checks | Recording |\n|---|---|---|")
             for s in items:
-                steps = _re.findall(r't\.step\(f?"([^"]*)"', inspect.getsource(s.fn))
-                what = " → ".join(_re.sub(r"\{[^}]*\}", "…", x).replace("|", "/") for x in steps[:4]) + (" → …" if len(steps) > 4 else "")
+                what = (s.desc or "(no description)").replace("|", "/")
                 cell = f"![{s.full}](media/{s.full}.gif)" if s.gif else "(no GIF)"
                 print(f"| `{s.name}`{' (online)' if s.online else ''} | {what} | {cell} |")
             print("\n</details>\n")
@@ -120,7 +118,7 @@ def main():
                 entry = registry.catalog_entry(spec.component) if spec.component else None
                 r = run_test(browser, spec.full, lambda t, f=spec.fn: f(t), base_dir=HERE, record_gif=a.gifs and spec.gif,
                              base_url=env.base, catalog_entry=entry, init_scripts=spec.init_scripts, dwell=dwell,
-                             known_issue=spec.known_issue, setup=make_setup(spec), **spec.context)
+                             known_issue=spec.known_issue, setup=make_setup(spec), **{"color_scheme": "dark", **spec.context})
                 results.append(r)
                 print(f"{ICON[r.status]:5} {r.name:46} {r.seconds:5.1f}s" + (f"  {r.gif_bytes // 1024} KB gif" if r.gif else "")
                       + (f"  {r.message.splitlines()[0][:110]}" if r.message and r.status != "passed" else ""), flush=True)

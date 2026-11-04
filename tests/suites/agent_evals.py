@@ -14,8 +14,15 @@ IDIO = os.path.join(os.path.dirname(EVALS), ".cache", "idiomorph-0.8.0.esm.js")
 def explain(res):
     return "; ".join(f"[{i['code']}] {i['message']}" for i in res["issues"])
 
+GOLDEN_DESC = {
+    "shopping-list": "The reference page for the shopping-list task (two filtered views of one store plus a chat panel) passes the checker: only catalog tags, no script, stores and lists wired correctly, and the task's own browser assertions hold.",
+    "todo-progress": "The reference page for the release-checklist task (three to-dos with progress steps, no store) passes the checker and its browser assertions.",
+    "chat-left": "The reference page for the support-chat task (a chat panel that opens from the left with a placeholder and a first message) passes the checker and its browser assertions.",
+    "kanban": "The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions.",
+}
+
 def golden_test(task_id, **kw):
-    @test("agent-evals", f"golden-{task_id}", needs_idiomorph=True, viewport={"width": 640, "height": 420}, **kw)
+    @test("agent-evals", f"golden-{task_id}", desc=GOLDEN_DESC[task_id], needs_idiomorph=True, viewport={"width": 640, "height": 420}, **kw)
     def _(t):
         task = ev.load_task(task_id)
         t.step(f"Task: {task['title']}")
@@ -27,7 +34,7 @@ def golden_test(task_id, **kw):
 for _id in ("shopping-list", "todo-progress", "chat-left", "kanban"):
     golden_test(_id)
 
-@test("agent-evals", "golden-needs-new-behavior-is-a-request", viewport={"width": 640, "height": 300})
+@test("agent-evals", "golden-needs-new-behavior-is-a-request", desc='For a task no component can do (a countdown timer), the correct answer is a written request for a new component with no inline script, and the checker accepts it.', viewport={"width": 640, "height": 300})
 def _(t):
     task = ev.load_task("needs-new-behavior")
     t.step("Task: " + task["title"])
@@ -59,7 +66,7 @@ MUTATIONS = [
     ("wrong view (no done filter)",        SHOP, lambda h: h.replace("where='{\"done\":true}'", ""), "assertion-failed"),
 ]
 
-@test("agent-evals", "checker-rejects-bad-output", needs_idiomorph=True, viewport={"width": 640, "height": 420})
+@test("agent-evals", "checker-rejects-bad-output", desc='Each of a set of deliberately broken pages (unknown tags, script, on* handlers, broken wiring, missing ids and so on) is rejected by the checker with the right reason.', needs_idiomorph=True, viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource", "net::ERR")
     task = ev.load_task(SHOP)
@@ -79,7 +86,7 @@ def _(t):
     t.step("Result: " + ("every bad output was rejected for the right reason" if not wrong else f"{len(wrong)} wrong verdicts"))
     check(not wrong, "checker verdicts were wrong:\n  " + "\n  ".join(wrong))
 
-@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", viewport={"width": 640, "height": 300})
+@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes.', viewport={"width": 640, "height": 300})
 def _(t):
     task = ev.load_task("needs-new-behavior")
     good = golden("needs-new-behavior", ".request.md")
@@ -99,7 +106,7 @@ def _(t):
             wrong.append(f"{name}: {explain(res) or 'PASS'}")
     check(not wrong, "; ".join(wrong))
 
-@test("agent-evals", "cli-and-aggregate-scoring", needs_idiomorph=True, gif=False, viewport={"width": 640, "height": 300})
+@test("agent-evals", "cli-and-aggregate-scoring", desc='check.py works as a command-line tool, and run_evals.py scores a folder of outputs and aggregates success rate and iterations.', needs_idiomorph=True, gif=False, viewport={"width": 640, "height": 300})
 def _(t):
     t.step("check.py works as a command")
     out = subprocess.run([sys.executable, os.path.join(EVALS, "check.py"), "--task", "kanban", "--html", os.path.join(EVALS, "golden", "kanban.html")], capture_output=True, text=True)

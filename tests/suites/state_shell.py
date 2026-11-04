@@ -19,7 +19,7 @@ def swap(p, layout):
     p.evaluate(f"document.querySelector('[data-layout={layout}]').click()")
     p.wait_for_timeout(450)
 
-@test("state", "swap-keeps-focus-caret-and-text", needs_idiomorph=True, viewport=VIEW)
+@test("state", "swap-keeps-focus-caret-and-text", desc='Swapping the outlet keeps focus, the caret and half-typed text in a stable-id input, and no to-dos are lost.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     eq(items(p), 10, "ten seeded items")
@@ -34,7 +34,7 @@ def _(t):
     t.step("Nothing was lost: still 10 to-dos in the store", "#status")
     check("10 items" in status(p), status(p))
 
-@test("state", "swap-keeps-scroll-position", needs_idiomorph=True, viewport=VIEW)
+@test("state", "swap-keeps-scroll-position", desc='Swapping the outlet keeps its scroll position, even when new markup is added above the list.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Scroll the outlet", "#outlet")
@@ -46,7 +46,7 @@ def _(t):
     check(p.locator("#outlet p", has_text="extra note").count() == 1, "the new markup arrived")
     check(abs(p.evaluate("document.getElementById('outlet').scrollTop") - 150) < 3, "scroll offset kept")
 
-@test("state", "swap-keeps-component-instances", needs_idiomorph=True, viewport=VIEW)
+@test("state", "swap-keeps-component-instances", desc='A swap morphs rather than replaces: the same element instance survives with its inline edit still open, and finishing the edit lands in the store.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Open an inline edit in one row", "#todos-t2")
@@ -60,7 +60,7 @@ def _(t):
     p.keyboard.press("Enter"); p.wait_for_timeout(200)
     check("(edited)" in p.evaluate("JSON.stringify(document.getElementById('store-todos').data)"), "store updated")
 
-@test("state", "filtered-view-and-two-columns", needs_idiomorph=True, viewport=VIEW)
+@test("state", "filtered-view-and-two-columns", desc='Layouts built from one store: an open-only view, and two columns (open and done) where ticking an item moves it across.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Open-only view shows just the open to-dos", "#outlet")
@@ -76,7 +76,7 @@ def _(t):
     eq(p.evaluate("document.querySelectorAll('#open ui-todo-item').length"), 7)
     eq(p.evaluate("document.querySelectorAll('#done ui-todo-item').length"), 3)
 
-@test("state", "action-from-outlet-reaches-shell-store", needs_idiomorph=True, viewport=VIEW)
+@test("state", "action-from-outlet-reaches-shell-store", desc='The store lives in the shell outside #outlet; ticking, renaming and deleting a row inside the outlet reach it through ui-action events.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.capture_events("ui-action")
@@ -93,7 +93,7 @@ def _(t):
     check(p.evaluate("!document.getElementById('store-todos').data.items.some(i => i.id === 't3')"), "t3 removed from the store")
     eq(items(p), 9)
 
-@test("state", "add-and-reorder-update-the-store", needs_idiomorph=True, viewport=VIEW)
+@test("state", "add-and-reorder-update-the-store", desc="Adding a to-do through the shell's input and reordering with the keyboard both update the store.", needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Add a to-do through the shell's input", "#new-todo")
@@ -107,7 +107,7 @@ def _(t):
     eq(p.evaluate("document.getElementById('store-todos').data.items.map(i => i.text)"), dom, "store order == DOM order")
     check(dom[0] != "Brand new", "the first row moved down")
 
-@test("state", "store-element-remove-and-readd", needs_idiomorph=True, viewport=VIEW)
+@test("state", "store-element-remove-and-readd", desc='Removing the <ui-store> element keeps the data, which is still rendered; changes made while it is gone survive re-adding it.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Remove the <ui-store> element from the page", "#store-todos")
@@ -123,7 +123,7 @@ def _(t):
     eq(reg(p, "r.get('todos', 'marker')"), "kept", "re-adding does not re-apply the seed")
     eq(reg(p, "r.get('todos', 'items').length"), 10)
 
-@test("state", "persist-local-survives-reload", needs_idiomorph=True, viewport=VIEW)
+@test("state", "persist-local-survives-reload", desc='With persist="local" changes survive a reload (items, order, ticked state), and a different schema version ignores stored data and re-seeds.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Change the data: tick one, add one", "#outlet")
@@ -142,7 +142,7 @@ def _(t):
     p.reload(); p.wait_for_function("document.querySelectorAll('#outlet ui-todo-item').length > 0")
     eq(items(p), 10, "back to the seed")
 
-@test("state", "chat-panel-in-the-shell", needs_idiomorph=True, viewport=VIEW)
+@test("state", "chat-panel-in-the-shell", desc="The shell's chat panel and its conversation survive an outlet swap and a page reload.", needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.step("Open the shell's chat panel (it persists across swaps)", "#chat")
@@ -159,7 +159,7 @@ def _(t):
     p.reload(); p.wait_for_function("document.getElementById('chat').messages.length > 0")
     eq(len(p.evaluate("document.getElementById('chat').messages")), 3)
 
-@test("state", "outlet-never-swaps-the-shell", needs_idiomorph=True, viewport=VIEW)
+@test("state", "outlet-never-swaps-the-shell", desc='Hostile markup swapped into the outlet never touches the shell: the chat panel and store elements are untouched.', needs_idiomorph=True, viewport=VIEW)
 def _(t):
     load(t); p = t.page
     t.allow_console("status of 404")        # the sanitized <img src="x"> still tries to load

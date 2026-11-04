@@ -10,7 +10,7 @@ VW, VH = 640, 420
 def settle(t, ms=420):
     t.page.wait_for_timeout(ms)
 
-@test("chat-panel", "open-close", component=C)
+@test("chat-panel", "open-close", desc='A closed panel is off screen, hidden and inert; toggle() opens it and returns the new state, focuses the composer, and Escape closes it and returns focus to the opener.', component=C)
 def _(t):
     open_fixture(t, '<button id="opener">Open chat</button><ui-chat-panel id="c" heading="Help"></ui-chat-panel>')
     t.capture_events(*EVENTS)
@@ -43,7 +43,7 @@ def _(t):
     p.click("#c .close"); settle(t)
     check(p.get_attribute("#c", "open") is None, "closed")
 
-@test("chat-panel", "backdrop", component=C)
+@test("chat-panel", "backdrop", desc='The `backdrop` attribute shows a scrim while the panel is open, and clicking the scrim closes the panel.', component=C)
 def _(t):
     open_fixture(t, '<ui-chat-panel id="c" backdrop open></ui-chat-panel>')
     p = t.page; settle(t)
@@ -54,7 +54,7 @@ def _(t):
     check(p.get_attribute("#c", "open") is None, "closed by scrim click")
     check(float(p.evaluate(f"getComputedStyle({panel('.backdrop')}).opacity")) < 0.1, "scrim gone")
 
-@test("chat-panel", "sides", component=C)
+@test("chat-panel", "sides", desc='The `side` attribute puts the panel on the right (default), left or bottom edge and slides it in from there.', component=C)
 def _(t):
     open_fixture(t, '<ui-chat-panel id="r"></ui-chat-panel><ui-chat-panel id="l" side="left"></ui-chat-panel><ui-chat-panel id="b" side="bottom"></ui-chat-panel>')
     p = t.page
@@ -68,7 +68,7 @@ def _(t):
         check(check_fn(r), f"{name} panel rect is wrong: {r}")
         p.evaluate(f"document.getElementById('{side}').hide()"); settle(t)
 
-@test("chat-panel", "send-and-messages", component=C)
+@test("chat-panel", "send-and-messages", desc='Slotted messages render by role; Enter sends, Shift+Enter inserts a newline, empty input sends nothing, and a ui-send event carries the text.', component=C)
 def _(t):
     open_fixture(t, '<ui-chat-panel id="c" heading="Help" placeholder="Ask…" open><div data-role="agent">Hello from the slot</div></ui-chat-panel>')
     t.capture_events(*EVENTS)
@@ -107,7 +107,7 @@ def _(t):
     p.fill("#c textarea", "keep me"); p.keyboard.press("Enter")
     eq(p.input_value("#c textarea"), "keep me"); eq(p.evaluate("document.getElementById('c').messages.length"), 0)
 
-@test("chat-panel", "busy-and-no-echo", component=C)
+@test("chat-panel", "busy-and-no-echo", desc='`no-echo` stops the user bubble being added on send; `busy` shows a pending bubble and disables Send, `busy-text` customizes it, and clearing `busy` re-enables Send.', component=C)
 def _(t):
     open_fixture(t, '<ui-chat-panel id="c" open no-echo></ui-chat-panel>')
     t.capture_events(*EVENTS)
@@ -129,7 +129,7 @@ def _(t):
     p.evaluate("document.getElementById('c').busy = false")
     check(p.locator("#c .send").is_enabled(), "send enabled")
 
-@test("chat-panel", "reduced-motion", component=C, reduced_motion="reduce")
+@test("chat-panel", "reduced-motion", desc='With prefers-reduced-motion: reduce the panel slides with no real duration and is fully on screen immediately after opening.', component=C, reduced_motion="reduce")
 def _(t):
     open_fixture(t, '<ui-chat-panel id="c"></ui-chat-panel>')
     p = t.page
@@ -140,7 +140,7 @@ def _(t):
     p.evaluate("document.getElementById('c').show()"); p.wait_for_timeout(60)
     eq(rect(p, "#c .panel")["right"], VW)
 
-@test("chat-panel", "slide-animation", component=C)
+@test("chat-panel", "slide-animation", desc='Without a reduced-motion preference the panel animates in about 250 ms, and --ui-chat-panel-duration changes the speed.', component=C)
 def _(t):
     open_fixture(t, '<ui-chat-panel id="c"></ui-chat-panel>')
     p = t.page
@@ -155,7 +155,7 @@ def _(t):
     p.evaluate("document.getElementById('c').hide(); document.getElementById('c').style.setProperty('--ui-chat-panel-duration', '600ms')")
     eq(p.evaluate(f"parseFloat(getComputedStyle({panel('.panel')}).transitionDuration)"), 0.6)
 
-@test("chat-panel", "accessibility", component=C)
+@test("chat-panel", "accessibility", desc='The panel has proper roles and labels; while closed Tab skips it entirely, and when open the tab order is close, message log, composer, send.', component=C)
 def _(t):
     open_fixture(t, '<button id="before">before</button><ui-chat-panel id="c" heading="Support" placeholder="Ask support"></ui-chat-panel>')
     p = t.page
@@ -176,7 +176,7 @@ def _(t):
         p.keyboard.press("Tab"); seq.append(focused(p)[-1])
     check([s.split(".")[-1].replace("icon-btn", "close") for s in seq] == ["close", "log", "input", "send"], f"unexpected tab order {seq}")
 
-@test("chat-panel", "store-binding", component=C)
+@test("chat-panel", "store-binding", desc='With the `store` attribute, messages render from the store, sending dispatches a ui-action instead of echoing, and a store change from elsewhere appears in the panel.', component=C)
 def _(t):
     open_fixture(t, '<ui-store name="chat1"><script type="application/json">{"messages":[{"role":"agent","text":"seeded"}]}</script></ui-store><ui-chat-panel id="c" store="chat1" open></ui-chat-panel>')
     t.capture_events(*EVENTS)

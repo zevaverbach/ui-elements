@@ -9,31 +9,43 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "screenshot
 AXE = "https://cdn.jsdelivr.net/npm/axe-core@4.10.2/axe.min.js"
 LUMA = "(() => { const m = getComputedStyle(document.body).backgroundColor.match(/\\d+(\\.\\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; })()"
 
-@test("visual", "demo-pages-light-and-dark", needs_idiomorph=True, viewport={"width": 640, "height": 420})
+@test("visual", "demo-pages-light-and-dark", desc='Every demo page renders in both color schemes with no horizontal overflow, no blank screenshot, and a clearly light and a clearly dark background (the recording shows the dark pass).', needs_idiomorph=True, viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource", "status of 404")
     os.makedirs(OUT, exist_ok=True)
-    p = t.page
-    for path, themed in PAGES:
-        t.goto(path); p.wait_for_timeout(500)
-        name = path.split("/")[-1][:-5]
-        lum = {}
-        for scheme in ("light", "dark"):
-            t.step(f"{name}: {scheme} mode")
-            p.emulate_media(color_scheme=scheme); p.wait_for_timeout(150)
-            lum[scheme] = p.evaluate(LUMA)
-            p.screenshot(path=os.path.join(OUT, f"{name}-{scheme}.png"))
+    p = t.page                                      # recorded, dark
+    # The light pass runs in a separate, unrecorded context so the recording stays dark.
+    lctx = p.context.browser.new_context(color_scheme="light", viewport={"width": 640, "height": 420})
+    lctx.route(lambda url: not url.startswith(("http://127.0.0.1", "data:", "about:", "blob:")), lambda r: r.abort())
+    if env.idiomorph:
+        body = open(env.idiomorph, "rb").read()
+        lctx.route("**/idiomorph*", lambda r: r.fulfill(status=200, body=body, headers={"content-type": "application/javascript", "access-control-allow-origin": "*"}))
+    lp = lctx.new_page()
+    try:
+        for path, themed in PAGES:
+            name = path.split("/")[-1][:-5]
+            lp.goto(env.base + path); lp.wait_for_timeout(500)
+            lum = {"light": lp.evaluate(LUMA)}
+            lp.screenshot(path=os.path.join(OUT, f"{name}-light.png"))
+            over = lp.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+            check(over <= 1, f"{name} (light) overflows horizontally by {over}px")
+            t.goto(path); p.wait_for_timeout(500)
+            t.step(f"{name}: dark mode")
+            lum["dark"] = p.evaluate(LUMA)
+            p.screenshot(path=os.path.join(OUT, f"{name}-dark.png"))
             over = p.evaluate("document.documentElement.scrollWidth - window.innerWidth")
-            check(over <= 1, f"{name} ({scheme}) overflows horizontally by {over}px")
-        if themed:
-            check(lum["light"] > 0.8, f"{name}: light page background is too dark ({lum['light']:.2f})")
-            check(lum["dark"] < 0.35, f"{name}: dark page background is too light ({lum['dark']:.2f})")
-        sizes = [os.path.getsize(os.path.join(OUT, f"{name}-{s}.png")) for s in ("light", "dark")]
-        check(min(sizes) > 3000, f"{name}: a screenshot looks blank {sizes}")
-        if themed:
-            check(sizes[0] != sizes[1], f"{name}: light and dark screenshots are identical")
+            check(over <= 1, f"{name} (dark) overflows horizontally by {over}px")
+            if themed:
+                check(lum["light"] > 0.8, f"{name}: light page background is too dark ({lum['light']:.2f})")
+                check(lum["dark"] < 0.35, f"{name}: dark page background is too light ({lum['dark']:.2f})")
+            sizes = [os.path.getsize(os.path.join(OUT, f"{name}-{s}.png")) for s in ("light", "dark")]
+            check(min(sizes) > 3000, f"{name}: a screenshot looks blank {sizes}")
+            if themed:
+                check(sizes[0] != sizes[1], f"{name}: light and dark screenshots are identical")
+    finally:
+        lctx.close()
 
-@test("visual", "axe-accessibility", online=True, needs_idiomorph=True, viewport={"width": 640, "height": 420})
+@test("visual", "axe-accessibility", desc='Online check: axe-core finds no serious or critical accessibility violations on the demo pages.', online=True, needs_idiomorph=True, viewport={"width": 640, "height": 420})
 def _(t):
     t.allow_console("Failed to load resource", "status of 404")
     p = t.page
