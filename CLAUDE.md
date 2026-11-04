@@ -25,7 +25,7 @@
 1. Document its API in the **file header** (attributes/properties, slots, events with `detail` shapes, CSS custom properties, keyboard behavior). The header starts with `// <tag>`.
 2. Update **`components.json`** (tag, file, description, attributes, slots, events, cssCustomProperties, `composes-well-with`) and keep it valid JSON.
 3. Be loaded and shown in **`demo/index.html`**.
-4. Update `README.md`'s component table.
+4. Update `README.md`'s component table, and re-run `scripts/capture-media.py` if the look changed.
 5. Pass `node scripts/check-catalog.mjs` and a manual run of the demo served over http.
 
 ## Releasing
