@@ -1,9 +1,10 @@
 # GitHub Actions workflow for the ui-elements test suites.
-# To enable: copy this file to .github/workflows/tests.yml (pushing workflow files needs a token with the
-# `workflow` scope, or do it in the GitHub web UI: Add file > Create new file > .github/workflows/tests.yml).
+# Lives at .github/workflows/tests.yml. Runs on pull requests and on every push to main (which includes merges).
+# (Pushing workflow files needs a token with the `workflow` scope, or use the GitHub web UI.)
 name: tests
 on:
   push:
+    branches: [main]
   pull_request:
 jobs:
   suites:
