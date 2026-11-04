@@ -21,12 +21,13 @@
   #status { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--ui-color-muted); }
   textarea { width: 100%; min-height: 8rem; font-family: ui-monospace, monospace; font-size: .8rem; }
   @media (max-width: 560px) { #outlet .cols { grid-template-columns: 1fr; } }
-</style>
+.demo-nav{font-size:.85rem;margin:.2rem 0 .6rem}.demo-nav a{color:var(--ui-color-accent,#1f6feb)}</style>
 </head>
 <body>
 <!-- ============ THE STABLE SHELL: never swapped ============ -->
 <div class="shell">
   <h1>Stable shell</h1>
+  <nav class="demo-nav" aria-label="Demo pages"><a href="index.html">Components &amp; live editor</a> · <a href="shell.html">Stable shell</a> · <a href="sanitizer-test.html">Sanitizer test</a> · <a href="store-test.html">Store test</a></nav>
   <p class="note">The dashed box is the only region that is ever swapped. Stores and the chat panel live outside it, so layouts change without a reload, without losing to-dos, focus, caret or scroll. Serve over http (<code>python3 -m http.server</code>) and open <code>/demo/shell.html</code>.</p>
 
   <ui-store id="store-todos" name="todos" persist="local">
@@ -70,9 +71,9 @@
   </main>
 
   <h2 style="margin-top:1.5rem">Agent playground</h2>
-  <p class="note">Edit the HTML and swap it in. Scripts, <code>on*</code> handlers and <code>javascript:</code> URLs are stripped first.</p>
+  <p class="note">Edit the HTML: with “Live” on, the outlet updates as you type. Scripts, <code>on*</code> handlers and <code>javascript:</code> URLs are stripped first.</p>
   <textarea id="playground" aria-label="HTML to swap into the outlet"></textarea>
-  <div class="bar"><button id="swap-playground" class="primary">Swap this HTML in</button></div>
+  <div class="bar"><label><input type="checkbox" id="live" checked> Live</label> <button id="swap-playground" class="primary">Swap this HTML in</button></div>
 
   <ui-chat-panel id="chat" store="chat" heading="Assistant" placeholder="Try: how many left?"></ui-chat-panel>
 </div>
@@ -122,6 +123,8 @@
   }
 
   $('#swap-playground').onclick = () => swapOutlet(pg.value);
+  let liveTimer;
+  pg.addEventListener('input', () => { if ($('#live').checked) { clearTimeout(liveTimer); liveTimer = setTimeout(() => swapOutlet(pg.value), 150); } });
   $('#chat-btn').onclick = () => $('#chat').toggle();
   $('#reset').onclick = () => { localStorage.removeItem('ui-store:todos'); localStorage.removeItem('ui-store:chat'); location.reload(); };
 

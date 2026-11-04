@@ -120,7 +120,7 @@ Put data in `<ui-store>` elements and long-lived UI in a stable shell; an agent 
 </script>
 ```
 
-Swapped HTML is sanitized (no `<script>`, `on*` handlers or `javascript:` URLs). Read [docs/state-and-shell.md](docs/state-and-shell.md) for the rules and [docs/specs/ui-store.md](docs/specs/ui-store.md) for the full spec. Live example: `demo/shell.html`. These pieces are on `main` and ship with the next tag (suggested `v0.2.0`); until then pin a commit SHA.
+Swapped HTML is sanitized (no `<script>`, `on*` handlers or `javascript:` URLs). Read [docs/state-and-shell.md](docs/state-and-shell.md) for the rules and [docs/specs/ui-store.md](docs/specs/ui-store.md) for the full spec. Try it live: the [live editor](https://zevaverbach.github.io/ui-elements/demo/) on the demo page re-renders your markup as you type (no reload, state kept), and [`demo/shell.html`](https://zevaverbach.github.io/ui-elements/demo/shell.html) shows the full shell with layout buttons and its own live playground. These pieces are on `main` and ship with the next tag (suggested `v0.2.0`); until then pin a commit SHA.
 
 ## URLs
 
