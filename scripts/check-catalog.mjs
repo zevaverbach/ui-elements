@@ -1,11 +1,11 @@
 // Dev check (Node >= 18, no dependencies): components.json parses, and every file in
 // components/ has a catalog entry whose tag is registered in that file, with a header
-// and a demo mention. Usage: node scripts/check-catalog.mjs
+// and a mention in a demo page. Usage: node scripts/check-catalog.mjs
 import { readFileSync, readdirSync } from 'node:fs';
 const root = new URL('../', import.meta.url);
 const read = (p) => readFileSync(new URL(p, root), 'utf8');
 const cat = JSON.parse(read('components.json'));
-const demo = read('demo/index.html');
+const demo = readdirSync(new URL('demo/', root)).filter((f) => f.endsWith('.html')).map((f) => read(`demo/${f}`)).join('\n');
 const files = readdirSync(new URL('components/', root)).filter((f) => f.endsWith('.js'));
 let bad = 0;
 const fail = (m) => { console.error('FAIL', m); bad++; };
@@ -22,5 +22,6 @@ for (const f of files) {
 }
 for (const c of cat.components) if (!files.includes(c.file.replace('components/', ''))) fail(`${c.tag}: file missing`);
 for (const s of cat.shared) readFileSync(new URL(s, root));
+for (const f of readdirSync(new URL('components/_shared/', root))) if (!cat.shared.includes(`components/_shared/${f}`)) fail(`_shared/${f}: not listed in catalog.shared`);
 console.log(bad ? `${bad} problem(s)` : `ok: ${files.length} components in sync`);
 process.exit(bad ? 1 : 0);

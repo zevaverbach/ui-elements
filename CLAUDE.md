@@ -28,5 +28,15 @@
 4. Update `README.md`'s component table, and re-run `scripts/capture-media.py` if the look changed.
 5. Pass `node scripts/check-catalog.mjs` and a manual run of the demo served over http.
 
+## State and swappable UIs
+Read `docs/state-and-shell.md` (guidance) and `docs/specs/ui-store.md` (spec) before touching `ui-store`, `ui-each`, `_shared/store-registry.js`, `_shared/outlet.js`, or adding a store-bound component.
+- Never swap outside the outlet; only `swapOutlet()` replaces page UI at runtime.
+- Keep data in stores (`<ui-store>`), not in element fields. A store-bound component renders from the store and sends changes as `ui-action` events (`{store, action, payload}`).
+- Store binding is additive: a component must still work standalone, exactly as before, when `store` is not set.
+- Never put inline script, `on*` handlers or `javascript:` URLs in swapped HTML; the sanitizer strips them. Behavior that needs script means a new component in this repo.
+- A new component must be in `components.json` before agents can use it in swapped HTML (the sanitizer allowlist is read from it).
+- Give anything with transient state a stable `id`; `ui-each` children get `<ui-each id>-<key>`.
+- Run `demo/sanitizer-test.html` and `demo/store-test.html` (over http) after touching the sanitizer, registry or `ui-each`.
+
 ## Releasing
 Commit small logical steps to `main`. Cut releases as tags (`v0.x.y`) and update the pinned versions in README, AGENTS.md and `components.json`.
