@@ -17,11 +17,11 @@
     li.textContent = `${ok ? 'PASS' : 'FAIL'}: ${name}`;
     document.getElementById('out').append(li);
   };
-  const frag = (h, o) => { const d = document.createElement('div'); d.append(sanitizeFragment(h, o)); return d; };
+  const frag = (h, o) => sanitizeFragment(h, o); // a DocumentFragment: querySelector / textContent work on it
 
   // script and friends
-  check('script element removed', !frag('<div>a<script>alert(1)</script>b</div>').querySelector('script'));
-  check('text around removed script survives', frag('<div>a<script>alert(1)</script>b</div>').textContent === 'ab');
+  check('script element removed', !frag('<div>a<script>alert(1)<\/script>b</div>').querySelector('script'));
+  check('text around removed script survives', frag('<div>a<script>alert(1)<\/script>b</div>').textContent === 'ab');
   for (const t of ['iframe', 'object', 'embed', 'style', 'link', 'meta', 'svg', 'form'])
     check(`<${t}> removed`, !frag(`<div><${t}></${t}>x</div>`).querySelector(t));
 
@@ -51,17 +51,17 @@
   check('non-ui custom elements dropped by default', !frag('<x-evil></x-evil>').querySelector('x-evil'));
 
   // JSON seed exception
-  const d3 = frag('<ui-store name="a"><script type="application/json" onload="x()">{"items":[]}</script></ui-store>');
+  const d3 = frag('<ui-store name="a"><script type="application/json" onload="x()">{"items":[]}<\/script></ui-store>');
   const seed = d3.querySelector('ui-store > script');
   check('JSON seed script kept inside ui-store', seed && seed.textContent === '{"items":[]}');
   check('JSON seed script loses other attributes', seed && !seed.hasAttribute('onload'));
-  check('JSON script outside ui-store removed', !frag('<div><script type="application/json">{}</script></div>').querySelector('script'));
-  check('JS script inside ui-store removed', !frag('<ui-store name="a"><script>alert(1)</script></ui-store>').querySelector('script'));
+  check('JSON script outside ui-store removed', !frag('<div><script type="application/json">{}<\/script></div>').querySelector('script'));
+  check('JS script inside ui-store removed', !frag('<ui-store name="a"><script>alert(1)<\/script></ui-store>').querySelector('script'));
 
   // misc
-  check('comments removed', !sanitizeHtml('<div><!-- x -->a</div>').includes('<!--'));
-  check('sanitizeHtml is idempotent', (() => { const h = '<div onclick="x()"><script>1</script><ui-each store="a" tag="b"></ui-each></div>'; const a = sanitizeHtml(h); return a === sanitizeHtml(a); })());
-  check('nested/tricky: <scr<script>ipt> cannot reassemble', !/<script/i.test(sanitizeHtml('<scr<script>ipt>alert(1)</scr</script>ipt>')));
+  check('comments removed', !sanitizeHtml('<div><\!-- x -->a</div>').includes('<\!--'));
+  check('sanitizeHtml is idempotent', (() => { const h = '<div onclick="x()"><script>1<\/script><ui-each store="a" tag="b"></ui-each></div>'; const a = sanitizeHtml(h); return a === sanitizeHtml(a); })());
+  check('nested/tricky: <scr<script>ipt> cannot reassemble', !/<script/i.test(sanitizeHtml('<scr<script>ipt>alert(1)</scr<\/script>ipt>')));
   check('no script elements run: window.__pwned stays unset', (sanitizeHtml('<img src=x onerror="window.__pwned=1"><script>window.__pwned=1<\/script>'), !window.__pwned));
 
   const failed = results.filter((r) => !r.ok).length;

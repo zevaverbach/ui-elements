@@ -1,14 +1,25 @@
 {
   "name": "ui-elements",
-  "version": "0.1.0",
+  "version": "0.2.0-dev",
   "repository": "https://github.com/zevaverbach/ui-elements",
-  "usage": "<script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/<file>\"></script> then use the tag. Optional theme: <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/tokens.css\">. Each module registers itself; load only what you use.",
+  "usage": "<script type=\"module\" src=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/<file>\"></script> then use the tag. Optional theme: <link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/tokens.css\">. Each module registers itself; load only what you use. For runtime UI swaps, see docs/state-and-shell.md: keep stores and long-lived UI in a stable shell and swap only the outlet.",
   "tokens": {
     "file": "tokens.css",
     "properties": [
-      "--ui-color-bg", "--ui-color-surface", "--ui-color-surface-2", "--ui-color-text", "--ui-color-muted",
-      "--ui-color-border", "--ui-color-accent", "--ui-color-on-accent", "--ui-color-danger", "--ui-color-success",
-      "--ui-space", "--ui-radius", "--ui-font", "--ui-font-size"
+      "--ui-color-bg",
+      "--ui-color-surface",
+      "--ui-color-surface-2",
+      "--ui-color-text",
+      "--ui-color-muted",
+      "--ui-color-border",
+      "--ui-color-accent",
+      "--ui-color-on-accent",
+      "--ui-color-danger",
+      "--ui-color-success",
+      "--ui-space",
+      "--ui-radius",
+      "--ui-font",
+      "--ui-font-size"
     ],
     "notes": "Optional. Components fall back to built-in light/dark values. Set data-theme=\"light|dark\" on <html> to force a scheme."
   },
@@ -16,7 +27,9 @@
     "components/_shared/util.js",
     "components/_shared/base.js",
     "components/_shared/speech.js",
-    "components/_shared/reorder.js"
+    "components/_shared/reorder.js",
+    "components/_shared/store-registry.js",
+    "components/_shared/outlet.js"
   ],
   "components": [
     {
@@ -24,36 +37,124 @@
       "file": "components/ui-todo-item.js",
       "description": "A single to-do item with checkbox, inline edit, confirm-to-delete, optional progress steps, a Web Speech microphone button (hidden where unsupported) and drag/keyboard/touch reordering among sibling items.",
       "attributes": [
-        { "name": "text", "type": "string", "description": "Item text. Reflects to the text property." },
-        { "name": "checked", "type": "boolean", "description": "Item is done." },
-        { "name": "editing", "type": "boolean", "description": "Inline edit mode." },
-        { "name": "label", "type": "string", "description": "Small eyebrow label above the text." },
-        { "name": "progress", "type": "number 0-100", "description": "If present, shows four progress steps (25/50/75/100). Checking sets 100; unchecking from 100 sets 75." },
-        { "name": "lang", "type": "string", "description": "BCP-47 language for dictation. Default: document language." },
-        { "name": "no-speech", "type": "boolean", "description": "Never show the microphone button." },
-        { "name": "no-reorder", "type": "boolean", "description": "Hide the drag handle and disable reordering." },
-        { "name": "no-confirm", "type": "boolean", "description": "Delete on the first click instead of arm-then-confirm." }
+        {
+          "name": "text",
+          "type": "string",
+          "description": "Item text. Reflects to the text property."
+        },
+        {
+          "name": "checked",
+          "type": "boolean",
+          "description": "Item is done."
+        },
+        {
+          "name": "editing",
+          "type": "boolean",
+          "description": "Inline edit mode."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "description": "Small eyebrow label above the text."
+        },
+        {
+          "name": "progress",
+          "type": "number 0-100",
+          "description": "If present, shows four progress steps (25/50/75/100). Checking sets 100; unchecking from 100 sets 75."
+        },
+        {
+          "name": "lang",
+          "type": "string",
+          "description": "BCP-47 language for dictation. Default: document language."
+        },
+        {
+          "name": "no-speech",
+          "type": "boolean",
+          "description": "Never show the microphone button."
+        },
+        {
+          "name": "no-reorder",
+          "type": "boolean",
+          "description": "Hide the drag handle and disable reordering."
+        },
+        {
+          "name": "no-confirm",
+          "type": "boolean",
+          "description": "Delete on the first click instead of arm-then-confirm."
+        }
       ],
-      "properties": ["text", "checked", "editing", "progress"],
-      "methods": ["focusText()", "startEdit()", "cancelEdit()", "commitEdit()"],
+      "properties": [
+        "text",
+        "checked",
+        "editing",
+        "progress"
+      ],
+      "methods": [
+        "focusText()",
+        "startEdit()",
+        "cancelEdit()",
+        "commitEdit()"
+      ],
       "slots": [
-        { "name": "meta", "description": "Extra content under the text (tags, due date)." }
+        {
+          "name": "meta",
+          "description": "Extra content under the text (tags, due date)."
+        }
       ],
       "events": [
-        { "name": "ui-toggle", "detail": "{checked: boolean, progress: number|null}", "description": "Checked state changed." },
-        { "name": "ui-edit", "detail": "{text: string, previousText: string}", "description": "An edit was committed." },
-        { "name": "ui-delete", "detail": "{text: string}", "description": "Delete confirmed. Cancelable; if not prevented the element removes itself." },
-        { "name": "ui-transcript", "detail": "{text: string, final: boolean, value: string}", "description": "Speech-to-text result; value is the edit field after a final result is appended." },
-        { "name": "ui-progress", "detail": "{progress: number}", "description": "A progress step was chosen." },
-        { "name": "ui-reorder", "detail": "{from: number, to: number}", "description": "Item moved among sibling ui-todo-items; the DOM is already updated." }
+        {
+          "name": "ui-toggle",
+          "detail": "{checked: boolean, progress: number|null}",
+          "description": "Checked state changed."
+        },
+        {
+          "name": "ui-edit",
+          "detail": "{text: string, previousText: string}",
+          "description": "An edit was committed."
+        },
+        {
+          "name": "ui-delete",
+          "detail": "{text: string}",
+          "description": "Delete confirmed. Cancelable; if not prevented the element removes itself."
+        },
+        {
+          "name": "ui-transcript",
+          "detail": "{text: string, final: boolean, value: string}",
+          "description": "Speech-to-text result; value is the edit field after a final result is appended."
+        },
+        {
+          "name": "ui-progress",
+          "detail": "{progress: number}",
+          "description": "A progress step was chosen."
+        },
+        {
+          "name": "ui-reorder",
+          "detail": "{from: number, to: number}",
+          "description": "Item moved among sibling ui-todo-items; the DOM is already updated."
+        }
       ],
       "cssCustomProperties": [
-        "--ui-todo-item-bg", "--ui-todo-item-border", "--ui-todo-item-radius", "--ui-todo-item-padding",
-        "--ui-todo-item-text", "--ui-todo-item-muted", "--ui-todo-item-accent", "--ui-todo-item-danger"
+        "--ui-todo-item-bg",
+        "--ui-todo-item-border",
+        "--ui-todo-item-radius",
+        "--ui-todo-item-padding",
+        "--ui-todo-item-text",
+        "--ui-todo-item-muted",
+        "--ui-todo-item-accent",
+        "--ui-todo-item-danger"
       ],
-      "parts": ["row", "handle", "text", "edit-input", "mic", "delete"],
+      "parts": [
+        "row",
+        "handle",
+        "text",
+        "edit-input",
+        "mic",
+        "delete"
+      ],
       "composes-well-with": [],
-      "composed-in": ["ui-chat-panel (as slotted content, optional)"],
+      "composed-in": [
+        "ui-each (rendered per store item)"
+      ],
       "notes": "Place several ui-todo-items under one parent (div/ul) to get a reorderable list; reordering applies to siblings with the same tag. Keyboard: Space/Enter on the handle grabs, Arrow keys move, Space/Enter drops, Escape cancels."
     },
     {
@@ -61,37 +162,323 @@
       "file": "components/ui-chat-panel.js",
       "description": "A backend-agnostic chat panel that slides on and off the screen edge, with a message log, composer and a ui-send event for user messages.",
       "attributes": [
-        { "name": "open", "type": "boolean", "description": "Panel is on screen." },
-        { "name": "side", "type": "right|left|bottom", "description": "Edge it slides from. Default right." },
-        { "name": "heading", "type": "string", "description": "Header title." },
-        { "name": "placeholder", "type": "string", "description": "Composer placeholder. Default \"Message…\"." },
-        { "name": "busy", "type": "boolean", "description": "Shows a pending bubble and disables Send." },
-        { "name": "busy-text", "type": "string", "description": "Pending bubble text. Default \"Thinking…\"." },
-        { "name": "backdrop", "type": "boolean", "description": "Show a scrim; clicking it closes the panel." },
-        { "name": "no-echo", "type": "boolean", "description": "Do not append the user's message to the log on send." }
+        {
+          "name": "open",
+          "type": "boolean",
+          "description": "Panel is on screen."
+        },
+        {
+          "name": "side",
+          "type": "right|left|bottom",
+          "description": "Edge it slides from. Default right."
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "description": "Header title."
+        },
+        {
+          "name": "placeholder",
+          "type": "string",
+          "description": "Composer placeholder. Default \"Message…\"."
+        },
+        {
+          "name": "busy",
+          "type": "boolean",
+          "description": "Shows a pending bubble and disables Send."
+        },
+        {
+          "name": "busy-text",
+          "type": "string",
+          "description": "Pending bubble text. Default \"Thinking…\"."
+        },
+        {
+          "name": "backdrop",
+          "type": "boolean",
+          "description": "Show a scrim; clicking it closes the panel."
+        },
+        {
+          "name": "no-echo",
+          "type": "boolean",
+          "description": "Do not append the user's message to the log on send."
+        },
+        {
+          "name": "store",
+          "type": "string",
+          "description": "Optional ui-store name. Messages render from the store and a sent message becomes an `add` ui-action {role:'user', text}. Without it, behavior is unchanged."
+        },
+        {
+          "name": "store-path",
+          "type": "string",
+          "description": "Dot path of the messages array in the store. Default \"messages\"."
+        }
       ],
-      "properties": ["open", "heading", "busy", "messages (array of {role: user|agent|error, text})"],
-      "methods": ["toggle(force?) -> boolean", "show()", "hide()", "addMessage(role, text) -> HTMLElement", "clear()", "focusInput()"],
+      "properties": [
+        "open",
+        "heading",
+        "busy",
+        "messages (array of {role: user|agent|error, text})"
+      ],
+      "methods": [
+        "toggle(force?) -> boolean",
+        "show()",
+        "hide()",
+        "addMessage(role, text) -> HTMLElement",
+        "clear()",
+        "focusInput()"
+      ],
       "slots": [
-        { "name": "(default)", "description": "Messages as light-DOM elements with data-role=\"user|agent|error\"." },
-        { "name": "header", "description": "Replaces the heading text." },
-        { "name": "actions", "description": "Extra header buttons before the close button." },
-        { "name": "footer", "description": "Content between the log and the composer." }
+        {
+          "name": "(default)",
+          "description": "Messages as light-DOM elements with data-role=\"user|agent|error\"."
+        },
+        {
+          "name": "header",
+          "description": "Replaces the heading text."
+        },
+        {
+          "name": "actions",
+          "description": "Extra header buttons before the close button."
+        },
+        {
+          "name": "footer",
+          "description": "Content between the log and the composer."
+        }
       ],
       "events": [
-        { "name": "ui-send", "detail": "{text: string}", "description": "User submitted a message. Cancelable: preventDefault keeps the draft." },
-        { "name": "ui-open", "detail": "{open: true}", "description": "Panel opened." },
-        { "name": "ui-close", "detail": "{open: false}", "description": "Panel closed." }
+        {
+          "name": "ui-send",
+          "detail": "{text: string}",
+          "description": "User submitted a message. Cancelable: preventDefault keeps the draft."
+        },
+        {
+          "name": "ui-open",
+          "detail": "{open: true}",
+          "description": "Panel opened."
+        },
+        {
+          "name": "ui-close",
+          "detail": "{open: false}",
+          "description": "Panel closed."
+        },
+        {
+          "name": "ui-action",
+          "detail": "{store: string, action: \"add\", payload: {path: string, item: {role: \"user\", text: string}}}",
+          "description": "Only when `store` is set: the user's message as a store action (routed by the store registry)."
+        }
       ],
       "cssCustomProperties": [
-        "--ui-chat-panel-width", "--ui-chat-panel-height", "--ui-chat-panel-bg", "--ui-chat-panel-border",
-        "--ui-chat-panel-user-bg", "--ui-chat-panel-user-text", "--ui-chat-panel-agent-bg",
-        "--ui-chat-panel-z", "--ui-chat-panel-duration"
+        "--ui-chat-panel-width",
+        "--ui-chat-panel-height",
+        "--ui-chat-panel-bg",
+        "--ui-chat-panel-border",
+        "--ui-chat-panel-user-bg",
+        "--ui-chat-panel-user-text",
+        "--ui-chat-panel-agent-bg",
+        "--ui-chat-panel-z",
+        "--ui-chat-panel-duration"
       ],
-      "parts": ["panel", "header", "log", "message", "composer", "input", "send", "backdrop"],
-      "composes-well-with": [],
+      "parts": [
+        "panel",
+        "header",
+        "log",
+        "message",
+        "composer",
+        "input",
+        "send",
+        "backdrop"
+      ],
+      "composes-well-with": [
+        "ui-store"
+      ],
       "composed-in": [],
       "notes": "Toggle from any button with panel.toggle(). Slide animation is disabled under prefers-reduced-motion. Never makes network calls: the host listens for ui-send and calls addMessage('agent', ...)."
+    },
+    {
+      "tag": "ui-store",
+      "file": "components/ui-store.js",
+      "description": "Non-visual element declaring named, observable, optionally persistent JSON state; data lives in a registry outside the element so it survives the element being removed or swapped.",
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string (required)",
+          "description": "Store name. Without it the element warns and does nothing."
+        },
+        {
+          "name": "persist",
+          "type": "none|local|session",
+          "description": "Where to persist. Default none. Storage key is \"ui-store:<name>\" unless `key` is set."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "description": "Override the storage key."
+        },
+        {
+          "name": "version",
+          "type": "string",
+          "description": "Schema version, default \"1\". Stored value is {v, data}; a different stored v is ignored and the seed is used."
+        },
+        {
+          "name": "src",
+          "type": "URL",
+          "description": "Fetch JSON as the seed on first creation. Failure is non-fatal. Seed precedence: persisted, src, inline script."
+        }
+      ],
+      "properties": [
+        "data"
+      ],
+      "methods": [
+        "get(path)",
+        "set(path, value)",
+        "act(action, payload)"
+      ],
+      "slots": [
+        {
+          "name": "(none)",
+          "description": "A child <script type=\"application/json\"> holds the inline seed."
+        }
+      ],
+      "events": [
+        {
+          "name": "ui-store-ready",
+          "detail": "{name: string, data: any}",
+          "description": "Once after hydration."
+        },
+        {
+          "name": "ui-store-change",
+          "detail": "{name: string, path: string, data: any}",
+          "description": "After every change (path is \"\" if several paths changed in one batch). Hook for server sync."
+        }
+      ],
+      "actions": {
+        "how": "Dispatch a bubbling, composed `ui-action` event with detail {store, action, payload} from anywhere; it is routed by store name, not DOM position. Or call act()/dispatch() directly.",
+        "scope": "Operate on the array of objects at payload.path (default \"items\"); items are identified by id.",
+        "list": [
+          {
+            "name": "add",
+            "payload": "{item, index?}",
+            "description": "Assigns id via crypto.randomUUID() if missing."
+          },
+          {
+            "name": "remove",
+            "payload": "{id}"
+          },
+          {
+            "name": "update",
+            "payload": "{id, patch}",
+            "description": "Shallow-merges patch."
+          },
+          {
+            "name": "toggle",
+            "payload": "{id, field}",
+            "description": "Flips a boolean field."
+          },
+          {
+            "name": "move",
+            "payload": "{id, toIndex}",
+            "description": "Item ends at toIndex."
+          },
+          {
+            "name": "set",
+            "payload": "{path, value}",
+            "description": "Set any path."
+          },
+          {
+            "name": "clear",
+            "payload": "{}",
+            "description": "Empty the array."
+          }
+        ]
+      },
+      "cssCustomProperties": [],
+      "parts": [],
+      "composes-well-with": [
+        "ui-each",
+        "ui-chat-panel"
+      ],
+      "composed-in": [],
+      "notes": "Declare stores in the stable shell, outside the swapped outlet. Safe inside the outlet too: data is not deleted when the element is removed. Seed is used only when no store of that name exists. Values must be JSON-serializable."
+    },
+    {
+      "tag": "ui-each",
+      "file": "components/ui-each.js",
+      "description": "Renders one child component per item of a store array, reconciling by key so focus and transient state survive, and turns child events into store actions.",
+      "attributes": [
+        {
+          "name": "store",
+          "type": "string (required)",
+          "description": "Store name (may be declared later)."
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "description": "Dot path of the array in the store. Default \"items\"."
+        },
+        {
+          "name": "tag",
+          "type": "string (required)",
+          "description": "Child tag, e.g. ui-todo-item."
+        },
+        {
+          "name": "map",
+          "type": "JSON {childAttr: itemField}",
+          "description": "Item field (dot path ok) to child attribute. true sets a boolean attribute; false/null/undefined removes it. Example {\"text\":\"text\",\"checked\":\"done\"}."
+        },
+        {
+          "name": "key",
+          "type": "string",
+          "description": "Item field used for identity. Default \"id\"."
+        },
+        {
+          "name": "events",
+          "type": "JSON {childEvent: {action, field?, patch?, toIndex?}}",
+          "description": "Child event to action. \"$detail.x\" strings read event.detail.x. Example {\"ui-toggle\":{\"action\":\"toggle\",\"field\":\"done\"},\"ui-reorder\":{\"action\":\"move\"},\"ui-delete\":{\"action\":\"remove\"},\"ui-edit\":{\"action\":\"update\",\"patch\":{\"text\":\"$detail.text\"}}}. Cancelled (preventDefault) cancelable events dispatch nothing."
+        },
+        {
+          "name": "where",
+          "type": "JSON {field: value}",
+          "description": "Optional equality filter, e.g. {\"done\":false}. Reorders inside a filtered view map to the full array."
+        },
+        {
+          "name": "id",
+          "type": "string",
+          "description": "Give it a stable id: children get ids \"<id>-<key>\" and the morph keeps them."
+        }
+      ],
+      "properties": [],
+      "methods": [],
+      "slots": [
+        {
+          "name": "(none)",
+          "description": "Renders children into its own light DOM with display: contents."
+        }
+      ],
+      "events": [
+        {
+          "name": "ui-action",
+          "detail": "{store: string, action: string, payload: object}",
+          "description": "Dispatched for each mapped child event; routed to the store by name."
+        }
+      ],
+      "child-event-shapes": {
+        "ui-todo-item": {
+          "ui-toggle": "{checked: boolean, progress: number|null}",
+          "ui-edit": "{text: string, previousText: string}",
+          "ui-delete": "{text: string} (cancelable)",
+          "ui-reorder": "{from: number, to: number}",
+          "ui-progress": "{progress: number}",
+          "ui-transcript": "{text: string, final: boolean, value: string}"
+        }
+      },
+      "cssCustomProperties": [],
+      "parts": [],
+      "composes-well-with": [
+        "ui-todo-item",
+        "ui-store"
+      ],
+      "composed-in": [],
+      "notes": "The child tag is supplied by `tag`, so any component whose attributes and events fit map/events works. ui-each must have a ui-store with the same name somewhere in the page (stores are routed by name)."
     }
   ],
   "compositions": [
@@ -99,6 +486,11 @@
       "name": "To-do list beside a chat",
       "description": "A reorderable list is several ui-todo-item siblings in one container; a ui-chat-panel sits at the page level and is toggled by any button. Wire ui-transcript or ui-send to your own logic.",
       "html": "<div id=\"list\"><ui-todo-item text=\"One\"></ui-todo-item><ui-todo-item text=\"Two\"></ui-todo-item></div><button onclick=\"chat.toggle()\">Chat</button><ui-chat-panel id=\"chat\" heading=\"Assistant\"></ui-chat-panel>"
+    },
+    {
+      "name": "Stable shell with a swappable outlet",
+      "description": "Stores and long-lived UI stay in the shell; only <main id=\"outlet\"> is ever replaced, via swapOutlet() from components/_shared/outlet.js. Agent HTML contains only ui-* and plain layout tags, never script. See docs/state-and-shell.md and demo/shell.html.",
+      "html": "<ui-store name=\"todos\" persist=\"local\"></ui-store><ui-chat-panel store=\"chat\" id=\"chat\"></ui-chat-panel><main id=\"outlet\"><ui-each id=\"todos\" store=\"todos\" tag=\"ui-todo-item\" map='{\"text\":\"text\",\"checked\":\"done\"}' events='{\"ui-toggle\":{\"action\":\"toggle\",\"field\":\"done\"}}'></ui-each></main>"
     }
   ]
 }

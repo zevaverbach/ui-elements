@@ -77,7 +77,7 @@ export function sanitizeFragment(html, { allowedTags } = {}) {
 
 export function sanitizeHtml(html, opts = {}) {
   // Two passes so that re-parsing the serialized output cannot produce anything new (mutation XSS).
-  const once = (h) => { const d = document.createElement('div'); d.append(sanitizeFragment(h, opts)); return d.innerHTML; };
+  const once = (h) => { const t = document.createElement('template'); t.content.append(sanitizeFragment(h, opts)); return t.innerHTML; }; // template keeps it inert (no image loads)
   return once(once(html));
 }
 
