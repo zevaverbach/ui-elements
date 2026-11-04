@@ -19,7 +19,8 @@
 //       One exception to "no script": <script type="application/json"> directly inside <ui-store> is inert
 //       data and is kept (its type attribute is the only attribute kept).
 //
-// What survives a swap: elements with the same id keep their state; <ui-each> keeps its rendered children
+// What survives a swap: elements with the same id keep their state (the focused field's text and caret, and
+// other id'd inputs' typed text and every id'd scroll position are captured and restored around the morph); <ui-each> keeps its rendered children
 // (its attributes are synced and it re-renders from the store); the transient `editing` attribute of
 // ui-todo-item is not removed by a morph. Data belongs in <ui-store>, never in swapped markup.
 // The only external dependency is Idiomorph, imported on first use from a pinned jsDelivr URL.
@@ -106,12 +107,37 @@ function syncAttrs(from, to) {
   for (const a of to.attributes) if (from.getAttribute(a.name) !== a.value) from.setAttribute(a.name, a.value);
 }
 
+// Idiomorph resets an unfocused input to the new HTML's value and elements it detaches briefly can lose their
+// scroll offset, so capture both before the morph and put them back after (unless the agent's HTML changed
+// an input's default value on purpose).
+function snapshot(root) {
+  const fields = [...root.querySelectorAll('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea')]
+    .filter((f) => f.id)
+    .map((f) => ({ id: f.id, value: f.value, defaultValue: f.defaultValue, start: f.selectionStart, end: f.selectionEnd }));
+  const scrolls = [root, ...root.querySelectorAll('[id]')].filter((n) => n.scrollTop || n.scrollLeft).map((n) => ({ node: n, id: n.id, top: n.scrollTop, left: n.scrollLeft }));
+  return { fields, scrolls };
+}
+function restore(root, { fields, scrolls }) {
+  const byId = (id) => (root.id === id ? root : root.querySelector(`#${CSS.escape(id)}`));
+  for (const f of fields) {
+    const el = byId(f.id);
+    if (!el || el.defaultValue !== f.defaultValue || el.value === f.value) continue;
+    el.value = f.value;
+    try { if (f.start != null && el === document.activeElement) el.setSelectionRange(f.start, f.end); } catch { /* not selectable */ }
+  }
+  for (const sc of scrolls) {
+    const el = sc.node.isConnected ? sc.node : byId(sc.id);
+    if (el) { el.scrollTop = sc.top; el.scrollLeft = sc.left; }
+  }
+}
+
 export async function swapOutlet(html, { outlet = '#outlet', allowedTags } = {}) {
   const el = typeof outlet === 'string' ? document.querySelector(outlet) : outlet;
   if (!el) throw new Error(`[outlet] no element matches ${outlet}`);
   const frag = sanitizeFragment(html, { allowedTags: allowedTags ?? (await catalogTags()) });
   const Idiomorph = await loadIdiomorph();
   if (!Idiomorph) { el.replaceChildren(frag); return el; }
+  const saved = snapshot(el);
   Idiomorph.morph(el, [...frag.childNodes], {
     morphStyle: 'innerHTML',
     ignoreActiveValue: true, // keep what the user is typing in the focused field
@@ -124,5 +150,6 @@ export async function swapOutlet(html, { outlet = '#outlet', allowedTags } = {})
       },
     },
   });
+  restore(el, saved);
   return el;
 }
