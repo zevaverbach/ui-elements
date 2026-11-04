@@ -227,7 +227,9 @@ export class UiTodoItem extends HTMLElement {
   }
   _focusEdit() {
     this._edit.value = this._edit.value || this.text;
-    requestAnimationFrame(() => { this._edit.focus(); this._edit.setSelectionRange(this._edit.value.length, this._edit.value.length); });
+    const focus = () => { this._edit.focus(); this._edit.setSelectionRange(this._edit.value.length, this._edit.value.length); };
+    focus();                                                             // now, so keys typed straight after the click are not lost
+    if (this.shadowRoot.activeElement !== this._edit) requestAnimationFrame(focus);   // not rendered yet (e.g. element not connected)
   }
   commitEdit() {
     if (!this.editing) return;

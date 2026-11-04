@@ -102,6 +102,22 @@ def _(t):
     p.wait_for_timeout(100)
     eq(p.inner_text("#a .text"), "Buy bread")
 
+@test("todo-item", "edit-field-is-focused-immediately", component=C)
+def _(t):
+    open_fixture(t, '<ui-todo-item id="a" text="Buy milk"></ui-todo-item>')
+    p = t.page
+    t.step("startEdit() focuses the edit field in the same task (no keystroke can be lost)", "#a")
+    active = p.evaluate("""() => { const a = document.getElementById('a'); a.startEdit();
+      const e = a.shadowRoot.activeElement; return e ? e.className : null; }""")
+    eq(active, "edit", "the edit field has focus synchronously after startEdit()")
+    t.step("Typing straight after the click lands in the field", "#a")
+    p.keyboard.press("Control+A"); p.keyboard.type("Buy bread"); p.keyboard.press("Enter")
+    eq(p.text_content("#a .text"), "Buy bread")
+    t.step("Same when `editing` is set as an attribute", "#a")
+    active = p.evaluate("""() => { const a = document.getElementById('a'); a.setAttribute('editing', '');
+      const e = a.shadowRoot.activeElement; return e ? e.className : null; }""")
+    eq(active, "edit")
+
 @test("todo-item", "confirm-delete", component=C)
 def _(t):
     open_fixture(t, '<ui-todo-item id="a" text="Alpha"></ui-todo-item><ui-todo-item id="b" text="Bravo"></ui-todo-item><ui-todo-item id="c" text="Charlie" no-confirm></ui-todo-item>')
