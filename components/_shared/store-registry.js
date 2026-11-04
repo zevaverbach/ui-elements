@@ -119,7 +119,7 @@ function listenersFor(name) {
 }
 
 // Collect changes; notify once per microtask batch.
-function changed(rec, path) {
+function changed(rec, path, persist = true) {
   let q = R.queued.get(rec.name);
   if (!q) {
     q = new Set();
@@ -134,8 +134,7 @@ function changed(rec, path) {
     });
   }
   q.add(path);
-  rec.rev++;
-  schedulePersist(rec);
+  if (persist) schedulePersist(rec);
 }
 
 export function getStore(name) { return R.stores.get(name); }
@@ -152,7 +151,7 @@ export function ensureStore(name, { persist = 'none', key, version = '1', seed, 
     console.warn(`[ui-store] unknown persist="${persist}" for "${name}"; using "none"`);
     persist = 'none';
   }
-  const rec = { name, data: undefined, version: String(version), persist, key: key || `ui-store:${name}`, rev: 0, ready: null };
+  const rec = { name, data: undefined, version: String(version), persist, key: key || `ui-store:${name}`, dirty: false, ready: null };
   const stored = readPersisted(rec);
   rec.data = stored ? stored.data : clone(seed ?? {});
   R.stores.set(name, rec);
@@ -164,7 +163,7 @@ export function ensureStore(name, { persist = 'none', key, version = '1', seed, 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const fetched = await res.json();
         // Only adopt the fetched seed if nothing has changed the store in the meantime.
-        if (rec.rev === 0) { rec.data = clone(fetched); changed(rec, ''); }
+        if (!rec.dirty) { rec.data = clone(fetched); changed(rec, '', false); }
       } catch (err) {
         console.warn(`[ui-store] "${name}": could not load src ${src}; using inline seed`, err);
       }
@@ -172,7 +171,7 @@ export function ensureStore(name, { persist = 'none', key, version = '1', seed, 
   };
   rec.ready = hydrate().then(() => rec);
   // Subscribers that connected before the store existed learn about it now.
-  if (listenersFor(name).size) changed(rec, '');
+  if (listenersFor(name).size) changed(rec, '', false);
   return rec;
 }
 
@@ -186,6 +185,7 @@ export function set(name, path, value) {
   if (!rec) { console.warn(`[ui-store] set: no store "${name}"`); return false; }
   const segs = parse(path);
   rec.data = setIn(rec.data, segs, clone(value));
+  rec.dirty = true;
   changed(rec, segs.join('.'));
   return true;
 }
