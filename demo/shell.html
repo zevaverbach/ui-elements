@@ -19,7 +19,7 @@
   #outlet ui-each, #outlet .list { display: contents; }
   .list-wrap { display: grid; gap: .4rem; }
   #status { font-family: ui-monospace, monospace; font-size: .8rem; color: var(--ui-color-muted); }
-  textarea { width: 100%; min-height: 8rem; font-family: ui-monospace, monospace; font-size: .8rem; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 8rem; font-family: ui-monospace, monospace; font-size: .8rem; }
   @media (max-width: 560px) { #outlet .cols { grid-template-columns: 1fr; } }
 .demo-nav{font-size:.85rem;margin:.2rem 0 .6rem}.demo-nav a{color:var(--ui-color-accent,#1f6feb)}</style>
 </head>

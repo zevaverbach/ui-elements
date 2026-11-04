@@ -42,8 +42,18 @@ const badUrl = (v) => {
   return s.startsWith('data:') && !/^data:image\/(png|gif|jpe?g|webp)[;,]/.test(s);
 };
 
+// The parser stores an internal "is value" on <div is="x">; removeAttribute('is') does not clear it and the
+// serializer would still write is="x". Rebuild the element without it (customized built-ins are not supported).
+function withoutIsValue(el) {
+  const fresh = el.ownerDocument.createElement(el.localName);
+  for (const a of el.attributes) if (a.name.toLowerCase() !== 'is') fresh.setAttribute(a.name, a.value);
+  fresh.append(...el.childNodes);
+  el.replaceWith(fresh);
+  return fresh;
+}
+
 function clean(node, allowed) {
-  for (const child of [...node.childNodes]) {
+  for (let child of [...node.childNodes]) {
     if (child.nodeType === 8) { child.remove(); continue; }          // comments
     if (child.nodeType !== 1) continue;                               // text stays
     const tag = child.localName;
@@ -59,6 +69,7 @@ function clean(node, allowed) {
       child.replaceWith(...child.childNodes);
       continue;
     }
+    if (child.hasAttribute('is')) child = withoutIsValue(child);
     for (const a of [...child.attributes]) {
       const n = a.name.toLowerCase();
       if (n.startsWith('on') || DROP_ATTRS.has(n) || (URL_ATTRS.has(n) && badUrl(a.value))) child.removeAttribute(a.name);

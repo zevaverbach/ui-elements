@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  section { display: grid; gap: 6px; align-content: start; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-each.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+</head>
+<body>
+
+<ui-store name="board"><script type="application/json">{"items":[
+  {"id":"a","text":"Design the login page","status":"todo","done":false},
+  {"id":"b","text":"Write the API docs","status":"todo","done":false},
+  {"id":"c","text":"Build the settings page","status":"doing","done":false},
+  {"id":"d","text":"Fix the signup bug","status":"doing","done":false},
+  {"id":"e","text":"Set up CI","status":"done","done":true}
+]}</script></ui-store>
+
+<main id="outlet">
+  <h1>Board</h1>
+  <div class="cols">
+    <section>
+      <h2>To do</h2>
+      <ui-each id="todo" store="board" tag="ui-todo-item" where='{"status":"todo"}'
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-delete":{"action":"remove"},"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Doing</h2>
+      <ui-each id="doing" store="board" tag="ui-todo-item" where='{"status":"doing"}'
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-delete":{"action":"remove"},"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Done</h2>
+      <ui-each id="finished" store="board" tag="ui-todo-item" where='{"status":"done"}'
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-delete":{"action":"remove"},"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+  </div>
+</main>
+</body>
+</html>

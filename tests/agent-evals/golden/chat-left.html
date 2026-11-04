@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support chat</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  section { display: grid; gap: 6px; align-content: start; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-chat-panel.js"></script>
+</head>
+<body>
+
+<ui-chat-panel id="support" side="left" heading="Support" placeholder="Describe your problem" open>
+  <div data-role="agent">How can I help?</div>
+</ui-chat-panel>
+
+<main id="outlet">
+  <h1>Help centre</h1>
+  <p>Browse the articles, or ask the support assistant on the left.</p>
+</main>
+</body>
+</html>

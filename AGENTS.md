@@ -21,3 +21,8 @@ If the page has a shell (`<ui-store>` elements, `<ui-chat-panel>`, one `<main id
 - Never put `<script>`, `on*` handlers or `javascript:` URLs in swapped HTML; they are stripped. If you need behavior no component has, stop and propose a new component in this repo.
 - Component events become store changes through `ui-action` (`{store, action, payload}`); actions: add, remove, update, toggle, move, set, clear.
 - Available from the next tag (suggested `v0.2.0`); until then pin a commit SHA.
+
+## Testing what you build
+
+After building or changing a UI from these components, write or run Playwright tests for the user flow and do not report it done until they pass. Keep the failure bundles; when something fails, read `tests/failures/<test>/report.json` and `filmstrip.png` (and `console.log`), fix, rerun. The pattern and a copy-paste kit (`tests/kit/`): `docs/testing-your-app.md`. What this repo tests and how to run it: `tests/README.md`. To check a generated page against a task: `tests/agent-evals/README.md`.
+

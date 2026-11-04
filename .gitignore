@@ -1,2 +1,7 @@
 node_modules/
 .DS_Store
+tests/failures/
+tests/.cache/
+tests/screenshots/
+__pycache__/
+*.pyc

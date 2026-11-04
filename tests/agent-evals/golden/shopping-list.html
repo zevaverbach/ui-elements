@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shopping list</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+  section { display: grid; gap: 6px; align-content: start; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-each.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-chat-panel.js"></script>
+</head>
+<body>
+
+<!-- stable shell: stores and the chat panel live outside the outlet -->
+<ui-store name="shopping"><script type="application/json">{"items":[
+  {"id":"1","text":"Milk","done":false},
+  {"id":"2","text":"Eggs","done":false},
+  {"id":"3","text":"Bread","done":true}
+]}</script></ui-store>
+<ui-store name="shopping-chat"><script type="application/json">{"messages":[{"role":"agent","text":"What are we cooking this week?"}]}</script></ui-store>
+<ui-chat-panel id="chat" store="shopping-chat" heading="Assistant" placeholder="Ask about recipes" open></ui-chat-panel>
+
+<main id="outlet">
+  <h1>Shopping list</h1>
+  <div class="cols">
+    <section>
+      <h2>To buy</h2>
+      <ui-each id="to-buy" store="shopping" tag="ui-todo-item" where='{"done":false}'
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-delete":{"action":"remove"},"ui-reorder":{"action":"move"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}}}'></ui-each>
+    </section>
+    <section>
+      <h2>In basket</h2>
+      <ui-each id="in-basket" store="shopping" tag="ui-todo-item" where='{"done":true}'
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-delete":{"action":"remove"},"ui-reorder":{"action":"move"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}}}'></ui-each>
+    </section>
+  </div>
+</main>
+</body>
+</html>

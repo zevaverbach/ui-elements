@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>test fixture</title>
+<link rel="stylesheet" href="../../tokens.css">
+<style>body{margin:0;padding:12px;background:var(--ui-color-bg);color:var(--ui-color-text);font-family:var(--ui-font)} #root{display:grid;gap:6px}</style>
+</head>
+<body>
+<!-- Empty page that loads every component. Tests mount their own markup into #root. -->
+<main id="root"></main>
+<script type="module" src="../../components/ui-todo-item.js"></script>
+<script type="module" src="../../components/ui-chat-panel.js"></script>
+<script type="module" src="../../components/ui-store.js"></script>
+<script type="module" src="../../components/ui-each.js"></script>
+<script type="module">
+  import * as outlet from '../../components/_shared/outlet.js';
+  import * as registry from '../../components/_shared/store-registry.js';
+  window.__lib = { ...outlet, ...registry };
+</script>
+</body>
+</html>

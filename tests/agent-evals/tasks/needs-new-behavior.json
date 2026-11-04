@@ -1,0 +1,10 @@
+{
+ "id": "needs-new-behavior",
+ "title": "A task no component can do: the right answer is a request, not script",
+ "kind": "request",
+ "prompt": "Add a \"Start timer\" button to the page that counts down from 60 seconds and shows the remaining time, then rings (fires an event) at zero. If the library's components cannot do this, do NOT write inline script or onclick handlers. Instead write a request for a new component (request.md): what is missing, why no existing component can do it, and the proposed tag with its attributes, events, slots and CSS custom properties, following CLAUDE.md.",
+ "must_mention": [
+  "countdown",
+  "seconds"
+ ]
+}

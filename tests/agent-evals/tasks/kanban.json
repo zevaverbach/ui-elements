@@ -1,0 +1,33 @@
+{
+ "id": "kanban",
+ "title": "A three-column board where items can be deleted",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Build a tiny board with three columns, To do, Doing and Done, that are filtered views of one store of five tasks (each task has a status field of todo, doing or done): todo has two, doing has two, done has one. Items can be deleted (the delete button asks for a second click). Put the columns in <main id=\"outlet\"> and the store outside it. No script.",
+ "assert": [
+  {
+   "step": "Three columns with 2, 2 and 1 items",
+   "eval": "(() => { const c = [...document.querySelectorAll('#outlet ui-each')].map(e => e.querySelectorAll('ui-todo-item').length); return JSON.stringify(c.sort()) === JSON.stringify([1, 2, 2]); })()"
+  },
+  {
+   "step": "Each column filters on the status field",
+   "eval": "[...document.querySelectorAll('#outlet ui-each')].every(e => 'status' in JSON.parse(e.getAttribute('where')))"
+  },
+  {
+   "step": "Click delete twice on 'Fix the signup bug'",
+   "eval": "(() => { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => x.text === 'Fix the signup bug'); const d = i.shadowRoot.querySelector('.del'); d.click(); d.click(); return true; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The item is gone from the page",
+   "eval": "![...document.querySelectorAll('#outlet ui-todo-item')].some(x => x.text === 'Fix the signup bug')"
+  },
+  {
+   "step": "And gone from the store (4 items left)",
+   "eval": "globalThis[Symbol.for('ui-elements.store-registry')].stores.get('board').data.items.length === 4"
+  }
+ ]
+}
