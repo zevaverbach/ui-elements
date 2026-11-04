@@ -94,9 +94,33 @@ ui-chat-panel { --ui-chat-panel-width: 24rem; }
 | Tag | What it is |
 |---|---|
 | `ui-todo-item` | To-do item: check, inline edit, confirm-delete, progress steps, speech-to-text mic (Web Speech API), drag/keyboard/touch reorder |
-| `ui-chat-panel` | Slide-in chat panel with `ui-send` event; no backend assumed |
+| `ui-chat-panel` | Slide-in chat panel with `ui-send` event; no backend assumed. Optional `store` binding |
+| `ui-store` | Non-visual named JSON state (optionally persisted) that survives UI swaps |
+| `ui-each` | Renders one child component per item of a store array and maps its events to store actions |
 
 Full API for each is in the file header and in `components.json`. Design provenance: [`docs/inventory.md`](docs/inventory.md).
+
+## Shared state and swappable UIs
+
+Put data in `<ui-store>` elements and long-lived UI in a stable shell; an agent then changes the page by handing `swapOutlet()` new HTML, with no reload and no lost state (data, focus, caret, scroll, open edits).
+
+![Stable shell demo](docs/media/shell.png)
+
+```html
+<ui-store name="todos" persist="local"></ui-store>
+<ui-chat-panel id="chat" store="chat"></ui-chat-panel>
+<main id="outlet">
+  <ui-each id="todos" store="todos" tag="ui-todo-item"
+           map='{"text":"text","checked":"done"}'
+           events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-delete":{"action":"remove"}}'></ui-each>
+</main>
+<script type="module">
+  import { swapOutlet } from './components/_shared/outlet.js';
+  swapOutlet('<ui-each id="todos" store="todos" tag="ui-todo-item" where=\'{"done":false}\' ...></ui-each>');
+</script>
+```
+
+Swapped HTML is sanitized (no `<script>`, `on*` handlers or `javascript:` URLs). Read [docs/state-and-shell.md](docs/state-and-shell.md) for the rules and [docs/specs/ui-store.md](docs/specs/ui-store.md) for the full spec. Live example: `demo/shell.html`. These pieces are on `main` and ship with the next tag (suggested `v0.2.0`); until then pin a commit SHA.
 
 ## URLs
 
@@ -127,4 +151,5 @@ python3 scripts/capture-media.py   # needs playwright + ffmpeg; see the file hea
 
 ```sh
 node scripts/check-catalog.mjs   # dev-only; the library itself needs no Node
+# test pages (open over http, the tab title shows PASS (n)): demo/sanitizer-test.html, demo/store-test.html
 ```
