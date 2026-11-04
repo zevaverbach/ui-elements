@@ -71,6 +71,7 @@ CASES = [
 
 @test("sanitizer", "table-driven", init_scripts=[], viewport={"width": 640, "height": 420})
 def _(t):
+    t.allow_console("Failed to load resource")   # surviving <img src="x"> / blocked external URLs are inserted for real
     open_fixture(t)
     p = t.page
     t.step(f"{len(CASES)} cases: dangerous markup removed, ui-* and layout tags kept")
