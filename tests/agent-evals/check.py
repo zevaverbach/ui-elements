@@ -231,6 +231,7 @@ def browser_check(t, html, task, idiomorph_path=None):
     """Load the page in the Session's browser and run the task's assertions. Returns issues (does not raise)."""
     install_routes(t, idiomorph_path)
     t.page.route("http://eval.test/page.html", lambda r: r.fulfill(status=200, body=html, content_type="text/html"))
+    t.console.clear()                                # only errors from THIS page count
     t.step("Load the generated page")
     t.page.goto("http://eval.test/page.html")
     t.page.wait_for_timeout(900)

@@ -102,7 +102,7 @@ def main():
                 if spec.needs_idiomorph and not env.idiomorph:
                     results.append(Result(spec.full, "skipped", message="Idiomorph not cached; run once online to cache it")); continue
                 entry = registry.catalog_entry(spec.component) if spec.component else None
-                r = run_test(browser, spec.full, lambda t, f=spec.fn: f(t), base_dir=HERE, record_gif=a.gifs,
+                r = run_test(browser, spec.full, lambda t, f=spec.fn: f(t), base_dir=HERE, record_gif=a.gifs and spec.gif,
                              base_url=env.base, catalog_entry=entry, init_scripts=spec.init_scripts, dwell=dwell,
                              known_issue=spec.known_issue, setup=make_setup(spec), **spec.context)
                 results.append(r)
