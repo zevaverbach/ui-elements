@@ -17,7 +17,8 @@
 <script type="module">
   import * as outlet from '../../components/_shared/outlet.js';
   import * as registry from '../../components/_shared/store-registry.js';
-  window.__lib = { ...outlet, ...registry };
+  import * as speech from '../../components/_shared/speech.js';
+  window.__lib = { ...outlet, ...registry, speech };
 </script>
 </body>
 </html>

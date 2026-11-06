@@ -93,7 +93,7 @@ ui-chat-panel { --ui-chat-panel-width: 24rem; }
 
 | Tag | What it is |
 |---|---|
-| `ui-todo-item` | To-do item: check, inline edit, confirm-delete, progress steps, speech-to-text mic (Web Speech API), drag/keyboard/touch reorder |
+| `ui-todo-item` | To-do item: check, inline edit, confirm-delete, progress steps, speech-to-text mic (Web Speech API, or a host backend via `setTranscriber(async (blob, {mime, lang}) => text)` from `_shared/speech.js` when unsupported or `speech="backend"`; backend must accept webm/opus and mp4/AAC), drag/keyboard/touch reorder |
 | `ui-chat-panel` | Slide-in chat panel with `ui-send` event; no backend assumed. Optional `store` binding |
 | `ui-store` | Non-visual named JSON state (optionally persisted) that survives UI swaps |
 | `ui-each` | Renders one child component per item of a store array and maps its events to store actions |

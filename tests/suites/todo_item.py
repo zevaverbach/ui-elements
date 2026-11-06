@@ -1,9 +1,9 @@
 """Suite B (1/2): <ui-todo-item> in a real browser."""
-from registry import test, env, open_fixture, mount, SPEECH_MOCK, NO_SPEECH
+from registry import test, env, open_fixture, mount, SPEECH_MOCK, NO_SPEECH, BACKEND_MOCK
 from helpers import focused, texts, check, eq, touch_drag
 
 C = "ui-todo-item"
-EVENTS = ("ui-toggle", "ui-edit", "ui-delete", "ui-transcript", "ui-progress", "ui-reorder")
+EVENTS = ("ui-toggle", "ui-edit", "ui-delete", "ui-transcript", "ui-speech-error", "ui-progress", "ui-reorder")
 LIST = '<div id="list"><ui-todo-item id="a" text="Alpha"></ui-todo-item><ui-todo-item id="b" text="Bravo"></ui-todo-item><ui-todo-item id="c" text="Charlie"></ui-todo-item></div>'
 sh = lambda sel: f"ui-todo-item{sel}"   # Playwright CSS pierces open shadow roots
 
@@ -220,10 +220,10 @@ def _(t):
     check(p.locator("#a .edit").is_visible(), "edit field is open")
     t.step("An interim result emits ui-transcript but does not change the field", "#a")
     p.evaluate("window.__speech.say('hello', false)")
-    eq(t.events("ui-transcript")[-1]["detail"], {"text": "hello", "final": False, "value": "Buy"})
+    eq(t.events("ui-transcript")[-1]["detail"], {"text": "hello", "final": False, "value": "Buy", "source": "native"})
     t.step("A final result is appended to the field", "#a")
     p.evaluate("window.__speech.say('some milk', true)")
-    eq(t.events("ui-transcript")[-1]["detail"], {"text": "some milk", "final": True, "value": "Buy some milk"})
+    eq(t.events("ui-transcript")[-1]["detail"], {"text": "some milk", "final": True, "value": "Buy some milk", "source": "native"})
     eq(p.input_value("#a .edit"), "Buy some milk")
     t.step("Enter commits the dictated text", "#a")
     p.keyboard.press("Enter")
@@ -263,7 +263,7 @@ def _(t):
     check("Reorder Buy milk" in p.get_attribute("#a .handle", "aria-label"), "handle label names the item")
     eq([p.get_attribute(f"#a .step[data-v='{v}']", "aria-label") for v in (25, 50, 75, 100)], [f"Set {v} percent" for v in (25, 50, 75, 100)])
     eq(p.get_attribute("#a .steps", "role"), "group")
-    eq(p.get_attribute("#a [role=status]", "aria-live"), "assertive")
+    eq(p.get_attribute("#a [role=status]", "aria-live"), "polite")
     t.step("Tab order: grip, checkbox, steps, mic, edit, delete", "#a")
     p.focus("#before")
     seen = []
@@ -279,3 +279,88 @@ def _(t):
     check("check" in order[1], f"second stop should be the checkbox, got {order}")
     check(order[-1].endswith("del") or "del" in order[-1], f"last stop should be delete, got {order}")
     check(order.index(next(c for c in order if "mic" in c)) > order.index(next(c for c in order if "step" in c)), "steps come before the mic")
+
+
+LIVE = "document.getElementById('a').shadowRoot.querySelector('[role=status]').textContent"
+def _backend(t, html='<ui-todo-item id="a" text="Buy" lang="fr-FR"%s></ui-todo-item>', attrs="", result="du lait"):
+    open_fixture(t)
+    t.page.evaluate("(r) => window.__rec.install(r)", result)
+    mount(t, html % attrs)
+
+@test("todo-item", "speech-auto-prefers-native", desc="In `auto` mode the browser's Web Speech API is used even when a transcriber is registered.", component=C, init_scripts=[SPEECH_MOCK, BACKEND_MOCK])
+def _(t):
+    _backend(t)
+    t.capture_events(*EVENTS)
+    p = t.page
+    t.step("Click the mic: native recognition starts, the transcriber is not used", "#a")
+    p.click("#a .mic"); p.wait_for_timeout(100)
+    eq(p.evaluate("window.__speech.state.started"), 1)
+    eq(p.evaluate("window.__rec.state.gum"), 0, "getUserMedia not called")
+    p.evaluate("window.__speech.say('lait', true)")
+    eq(t.events("ui-transcript")[-1]["detail"]["source"], "native")
+
+@test("todo-item", "speech-backend-fallback", desc="Without Web Speech, a registered transcriber is used: record, stop, transcribe; the result arrives as a final ui-transcript with source backend, and the live region announces Recording then Transcribing.", component=C, init_scripts=[NO_SPEECH, BACKEND_MOCK])
+def _(t):
+    _backend(t)
+    t.capture_events(*EVENTS)
+    p = t.page
+    t.step("The mic is shown because the backend path is available", "#a")
+    check(p.locator("#a .mic").is_visible(), "mic visible")
+    t.step("Click the mic: recording starts and is announced", "#a")
+    p.click("#a .mic"); p.wait_for_timeout(100)
+    eq(p.evaluate("window.__rec.state.started"), 1)
+    eq(p.get_attribute("#a .mic", "aria-pressed"), "true")
+    eq(p.evaluate(LIVE), "Recording")
+    t.step("Click again to stop: the transcriber gets blob, mime and lang", "#a")
+    p.click("#a .mic"); p.wait_for_timeout(200)
+    eq(p.evaluate("window.__rec.calls"), [{"size": 3, "mime": "audio/webm;codecs=opus", "lang": "fr-FR"}])
+    eq(p.evaluate("window.__rec.state.tracksStopped"), 1, "microphone released")
+    eq(t.events("ui-transcript")[-1]["detail"], {"text": "du lait", "final": True, "value": "Buy du lait", "source": "backend"})
+    eq(p.input_value("#a .edit"), "Buy du lait")
+    eq(p.evaluate(LIVE), "Transcribing", "last announcement before idle is Transcribing")
+
+@test("todo-item", "speech-forced-backend", desc='`speech="backend"` uses the transcriber even when Web Speech exists; `speech="native"` keeps using Web Speech.', component=C, init_scripts=[SPEECH_MOCK, BACKEND_MOCK])
+def _(t):
+    _backend(t, attrs=' speech="backend"')
+    t.capture_events(*EVENTS)
+    p = t.page
+    t.step('speech="backend" records instead of using SpeechRecognition', "#a")
+    p.click("#a .mic"); p.wait_for_timeout(100)
+    eq(p.evaluate("window.__speech.state.started"), 0)
+    eq(p.evaluate("window.__rec.state.started"), 1)
+    p.click("#a .mic"); p.wait_for_timeout(200)
+    eq(t.events("ui-transcript")[-1]["detail"]["source"], "backend")
+    t.step('speech="native" keeps the mic (Web Speech exists here)', "#a")
+    p.evaluate("document.getElementById('a').setAttribute('speech', 'native')")
+    check(p.locator("#a .mic").is_visible(), "native available here, mic visible")
+
+@test("todo-item", "speech-mic-hidden-standalone", desc="With neither Web Speech nor a transcriber the mic is hidden and the item works standalone.", component=C, init_scripts=[NO_SPEECH, BACKEND_MOCK])
+def _(t):
+    open_fixture(t, '<ui-todo-item id="a" text="Buy"></ui-todo-item>')
+    p = t.page
+    t.step("No native API and no transcriber: mic hidden", "#a")
+    check(p.locator("#a .mic").is_hidden(), "mic hidden")
+    t.step("The rest of the item still works", "#a")
+    p.click("#a .check")
+    check(p.evaluate("document.getElementById('a').checked"), "toggle works")
+    t.step('speech="native" without Web Speech hides the mic even with a transcriber', "#a")
+    p.evaluate("window.__rec.install('x'); const a = document.getElementById('a'); a.setAttribute('speech', 'native')")
+    check(p.locator("#a .mic").is_hidden(), "mic hidden")
+
+@test("todo-item", "speech-backend-errors", desc="getUserMedia denial and a rejecting transcriber surface as ui-speech-error (not-allowed, transcribe-failed) and are announced.", component=C, init_scripts=[NO_SPEECH, BACKEND_MOCK])
+def _(t):
+    _backend(t, result="reject")
+    t.capture_events(*EVENTS)
+    p = t.page
+    t.step("Microphone permission denied", "#a")
+    p.evaluate("window.__rec.deny('NotAllowedError')")
+    p.click("#a .mic"); p.wait_for_timeout(150)
+    eq(t.events("ui-speech-error")[-1]["detail"], {"code": "not-allowed", "source": "backend"})
+    eq(p.evaluate(LIVE), "Microphone access denied")
+    eq(p.get_attribute("#a .mic", "aria-pressed"), "false")
+    t.step("The transcriber rejects", "#a")
+    p.click("#a .mic"); p.wait_for_timeout(100)
+    p.click("#a .mic"); p.wait_for_timeout(200)
+    eq(t.events("ui-speech-error")[-1]["detail"], {"code": "transcribe-failed", "source": "backend"})
+    eq(p.evaluate(LIVE), "Dictation failed")
+    eq(len(t.events("ui-transcript")), 0, "no transcript emitted")

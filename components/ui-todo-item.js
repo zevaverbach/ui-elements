@@ -14,6 +14,11 @@
 //                         unchecking from 100 sets 75 (Day Stack behavior)
 //   lang         string   BCP-47 language for dictation (default: document language)
 //   no-speech    boolean  never show the mic button
+//   speech       "auto" | "native" | "backend"   dictation path (default auto). auto = the browser's
+//                Web Speech where supported, else the host's transcriber (setTranscriber() in
+//                _shared/speech.js, or this element's `transcriber` property); backend forces the
+//                transcriber; native never uses it. The mic is shown if the chosen path is available.
+//   transcriber  property only: async (blob, {mime, lang}) => text, overrides the global transcriber
 //   no-reorder   boolean  hide the drag handle / disable reordering
 //   no-confirm   boolean  delete immediately instead of arm-then-confirm (click twice within 2.6 s)
 //
@@ -24,8 +29,11 @@
 //   ui-toggle      {checked: boolean, progress: number|null}
 //   ui-edit        {text: string, previousText: string}               after an edit is committed
 //   ui-delete      {text: string}  cancelable; if not prevented the element removes itself
-//   ui-transcript  {text: string, final: boolean, value: string}     speech-to-text result;
-//                  `value` is the edit field's content after a final result is appended
+//   ui-transcript  {text: string, final: boolean, value: string, source: "native"|"backend"}
+//                  speech-to-text result; `value` is the edit field's content after a final result
+//                  is appended. Backend results are always final (no interim text).
+//   ui-speech-error {code: string, source: "native"|"backend"}   e.g. "not-allowed" (mic denied),
+//                  "transcribe-failed" (transcriber rejected), "no-speech" (backend heard nothing)
 //   ui-progress    {progress: number}
 //   ui-reorder     {from: number, to: number}   indices among sibling ui-todo-items, after DOM moved
 //
@@ -87,7 +95,7 @@ const ICONS = {
 };
 
 export class UiTodoItem extends HTMLElement {
-  static observedAttributes = ['text', 'checked', 'editing', 'label', 'progress', 'no-speech', 'no-reorder'];
+  static observedAttributes = ['text', 'checked', 'editing', 'label', 'progress', 'no-speech', 'speech', 'no-reorder'];
 
   constructor() {
     super();
@@ -96,7 +104,14 @@ export class UiTodoItem extends HTMLElement {
     this._reorder = new Reorder(this);
     this._dict = createDictation({
       lang: () => this.getAttribute('lang'),
-      onResult: (text, final) => this._onTranscript(text, final),
+      speech: () => this.getAttribute('speech'),
+      transcriber: () => this.transcriber,
+      onResult: (text, final, source) => this._onTranscript(text, final, source),
+      onStatus: (s) => this._onStatus(s),
+      onError: (code, source) => {
+        this._say(code === 'not-allowed' ? 'Microphone access denied' : code === 'no-speech' ? 'No speech heard' : 'Dictation failed');
+        emit(this, 'ui-speech-error', { code, source });
+      },
       onState: (on) => this._mic?.setAttribute('aria-pressed', String(on)),
     });
     this._build();
@@ -140,7 +155,7 @@ export class UiTodoItem extends HTMLElement {
         <button class="icon-btn editbtn" type="button">${ICONS.edit}</button>
         <button class="icon-btn del" part="delete" type="button"><span class="x">${ICONS.del}</span></button>
       </div>
-      <div class="sr-only" role="status" aria-live="assertive"></div>`;
+      <div class="sr-only" role="status" aria-live="polite"></div>`;
     const $ = (s) => r.querySelector(s);
     Object.assign(this, {
       _handle: $('.handle'), _check: $('.check'), _eyebrow: $('.eyebrow'), _text: $('.text'), _edit: $('.edit'),
@@ -191,7 +206,7 @@ export class UiTodoItem extends HTMLElement {
     this._edit.hidden = !editing;
     this._editBtn.setAttribute('aria-label', editing ? 'Save' : `Edit ${text}`);
     this._editBtn.title = editing ? 'Save' : 'Edit';
-    const canSpeak = speechSupported() && !this.hasAttribute('no-speech');
+    const canSpeak = speechSupported(this.getAttribute('speech') || 'auto', this.transcriber) && !this.hasAttribute('no-speech');
     this._mic.hidden = !canSpeak;
     this._mic.setAttribute('aria-label', 'Dictate text');
     this._mic.title = 'Dictate';
@@ -247,13 +262,17 @@ export class UiTodoItem extends HTMLElement {
     if (!this.editing) this.startEdit();
     this._dict.toggle();
   }
-  _onTranscript(text, final) {
+  _onStatus(s) {
+    if (s === 'recording') this._say('Recording');
+    else if (s === 'transcribing') this._say('Transcribing');
+  }
+  _onTranscript(text, final, source = 'native') {
     if (!text) return;
     if (final) {
       this._edit.value = `${this._edit.value} ${text}`.trim();
       this._edit.focus();
     }
-    emit(this, 'ui-transcript', { text, final, value: this._edit.value });
+    emit(this, 'ui-transcript', { text, final, value: this._edit.value, source });
   }
 
   _setArmed(on) {

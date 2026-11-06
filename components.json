@@ -73,6 +73,11 @@
           "description": "Never show the microphone button."
         },
         {
+          "name": "speech",
+          "type": "\"auto\" | \"native\" | \"backend\"",
+          "description": "Dictation path. auto (default): Web Speech where supported, else the host transcriber registered with setTranscriber() from components/_shared/speech.js. native: Web Speech only. backend: always record and send to the transcriber. The mic is hidden when the chosen path is unavailable."
+        },
+        {
           "name": "no-reorder",
           "type": "boolean",
           "description": "Hide the drag handle and disable reordering."
@@ -119,8 +124,13 @@
         },
         {
           "name": "ui-transcript",
-          "detail": "{text: string, final: boolean, value: string}",
-          "description": "Speech-to-text result; value is the edit field after a final result is appended."
+          "detail": "{text: string, final: boolean, value: string, source: \"native\" | \"backend\"}",
+          "description": "Speech-to-text result; value is the edit field after a final result is appended. Backend results arrive once, final, with no interim results."
+        },
+        {
+          "name": "ui-speech-error",
+          "detail": "{code: string, source: \"native\" | \"backend\"}",
+          "description": "Dictation failed (not-allowed, audio-capture, transcribe-failed, no-speech, ...)."
         },
         {
           "name": "ui-progress",
@@ -468,7 +478,8 @@
           "ui-delete": "{text: string} (cancelable)",
           "ui-reorder": "{from: number, to: number}",
           "ui-progress": "{progress: number}",
-          "ui-transcript": "{text: string, final: boolean, value: string}"
+          "ui-transcript": "{text: string, final: boolean, value: string, source: \"native\" | \"backend\"}",
+          "ui-speech-error": "{code: string, source: \"native\" | \"backend\"}"
         }
       },
       "cssCustomProperties": [],

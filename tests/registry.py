@@ -81,3 +81,34 @@ SPEECH_MOCK = """
 })();
 """
 NO_SPEECH = "delete window.SpeechRecognition; delete window.webkitSpeechRecognition; window.SpeechRecognition = undefined; window.webkitSpeechRecognition = undefined;"
+
+# Mock getUserMedia + MediaRecorder for the backend (transcriber) path.
+#   window.__rec.state      {gum, started, stopped, denied, tracksStopped}
+#   window.__rec.deny(name) make the next getUserMedia reject with a DOMException of that name
+#   window.__rec.calls      [{size, mime, lang}] seen by the stub transcriber
+#   window.__rec.install(text|Error)  register a stub transcriber (global) returning text or rejecting
+BACKEND_MOCK = """
+(() => {
+  const state = { gum: 0, started: 0, stopped: 0, deny: null, tracksStopped: 0 };
+  const calls = [];
+  navigator.mediaDevices.getUserMedia = async () => {
+    state.gum++;
+    if (state.deny) { const n = state.deny; state.deny = null; throw new DOMException('denied', n); }
+    return { getTracks: () => [{ stop: () => { state.tracksStopped++; } }] };
+  };
+  class MockRecorder {
+    static isTypeSupported(m) { return m === 'audio/webm;codecs=opus'; }
+    constructor(stream, opts) { this.mimeType = (opts && opts.mimeType) || 'audio/webm'; this.state = 'inactive'; }
+    start() { state.started++; this.state = 'recording'; }
+    stop() { state.stopped++; this.state = 'inactive';
+      setTimeout(() => { this.ondataavailable && this.ondataavailable({ data: new Blob(['abc'], { type: this.mimeType }) });
+        this.onstop && this.onstop(); }, 0); }
+  }
+  window.MediaRecorder = MockRecorder;
+  window.__rec = { state, calls, deny(n) { state.deny = n; },
+    install(result) { window.__lib.speech.setTranscriber(async (blob, o) => {
+      calls.push({ size: blob.size, mime: o.mime, lang: o.lang });
+      if (result === 'reject') throw new Error('boom');
+      return result; }); } };
+})();
+"""

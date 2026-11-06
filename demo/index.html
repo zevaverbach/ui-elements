@@ -105,13 +105,16 @@
 <script type="module" src="../components/ui-store.js"></script>
 <script type="module" src="../components/ui-each.js"></script>
 <script type="module">
+  import { setTranscriber } from '../components/_shared/speech.js';
+  // Stub backend STT so the fallback path (e.g. Firefox, or speech="backend") is demonstrable.
+  setTranscriber(async (blob, { mime, lang }) => `(stub transcript: ${blob.size} bytes of ${mime}, ${lang || 'default lang'})`);
   const $ = (s) => document.querySelector(s);
   const log = $('#log');
   const note = (name, detail) => {
     log.textContent = (log.textContent.startsWith('(') ? '' : log.textContent + '\n') + `${name} ${JSON.stringify(detail)}`;
     log.scrollTop = log.scrollHeight;
   };
-  for (const n of ['ui-toggle', 'ui-edit', 'ui-delete', 'ui-transcript', 'ui-progress', 'ui-reorder', 'ui-send', 'ui-open', 'ui-close'])
+  for (const n of ['ui-toggle', 'ui-edit', 'ui-delete', 'ui-transcript', 'ui-speech-error', 'ui-progress', 'ui-reorder', 'ui-send', 'ui-open', 'ui-close'])
     document.addEventListener(n, (e) => note(n, e.detail));
 
   $('#theme').onclick = () => {
