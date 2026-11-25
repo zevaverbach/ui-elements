@@ -73,7 +73,7 @@ def row(t, cells, ok, excerpt=None):
 def codes(res):
     return "PASS" if res["passed"] else ", ".join(sorted({i["code"] for i in res["issues"]}))
 
-@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task no component can do (a live status dashboard), the correct answer is a written request for a new component with no inline script, and the checker accepts it.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 380})
+@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 380})
 def _(t):
     task = ev.load_task("glance-dashboard")
     good = golden("glance-dashboard", ".request.md")
@@ -159,6 +159,28 @@ def _(t):
     row(t, ["control: the proper request", "PASS", codes(res)], res["passed"], re.sub(r"\s+", " ", good)[:60])
     t.step("Control: the proper request still passes")
     check(res["passed"], "the golden request must pass: " + explain(res))
+    check(not wrong, "; ".join(wrong))
+
+@test("agent-evals", "checker-rejects-cheating-on-the-dashboard", desc='Answering the dashboard task with a to-do list dressed up as a dashboard, inline script, or a request that ignores the store or the warn state is rejected; only a proper ui-status request passes.', viewport={"width": 640, "height": 300})
+def _(t):
+    task = ev.load_task("glance-dashboard")
+    good = golden("glance-dashboard", ".request.md")
+    todo_page = ("<main id='outlet'><ui-todo-item text='Baby: sleeping' checked></ui-todo-item>"
+                 "<ui-todo-item text='Package: en route'></ui-todo-item></main>")
+    cases = [
+        ("to-do items dressed up as a dashboard", dict(html=todo_page, request=None), "request-incomplete"),
+        ("inline script that rewrites rows",      dict(html="<main id='outlet'><p id='baby'></p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
+        ("onclick refresh button",                dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
+        ("proposes an existing tag only",          dict(request=good.replace("`ui-status-change`", "a change event").replace("ui-status", "ui-progress")), "request-incomplete"),
+        ("ignores the store",                     dict(request=re.sub("store", "source", good, flags=re.I)), "request-incomplete"),
+        ("ignores the warn state",                dict(request=re.sub("warn", "amber", good, flags=re.I)), "request-incomplete"),
+    ]
+    wrong = []
+    for name, kw, code in cases:
+        t.step(f"Bad output: {name} -> expect [{code}]")
+        res = ev.check_output(t, task, **kw)
+        if res["passed"] or code not in {i["code"] for i in res["issues"]}:
+            wrong.append(f"{name}: {explain(res) or 'PASS'}")
     check(not wrong, "; ".join(wrong))
 
 @test("agent-evals", "cli-and-aggregate-scoring", desc='check.py works as a command-line tool, and run_evals.py scores a folder of outputs and aggregates success rate and iterations.', needs_idiomorph=True, gif=False, viewport={"width": 640, "height": 300})
