@@ -30,7 +30,7 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 | Suite | Checks | Why |
 |---|---|---|
 | **A. catalog** (`catalog-integrity`) | `components.json` parses; every component file has an entry, a header and a demo; every attribute, event, slot, method, property, part, CSS custom property and store action in the **source** matches the catalog and the file header, in both directions, with a diff when they disagree | agents trust the catalog instead of reading source; drift makes them write wrong HTML |
-| **B. `todo-item`, `chat-panel`** | attributes and properties, event names and `detail` shapes (and that they bubble and are composed), keyboard behavior, roles/labels/focus order. todo-item: toggle, progress steps, inline edit, confirm-delete including a vetoed cancelable `ui-delete`, mouse drag, keyboard and **touch** reorder, speech-to-text with a **mocked SpeechRecognition** (and the mic hidden when the API is missing). chat-panel: open/close, focus return, backdrop, all three sides, `ui-send` (cancelable, Shift+Enter), `addMessage`/`messages`, busy, `prefers-reduced-motion`, store binding | the contract of each element, in a real browser |
+| **B. `todo-item`, `chat-panel`, `progress`** | attributes and properties, event names and `detail` shapes (and that they bubble and are composed), keyboard behavior, roles/labels/focus order. todo-item: toggle, progress steps, inline edit, confirm-delete including a vetoed cancelable `ui-delete`, mouse drag, keyboard and **touch** reorder, speech-to-text with a **mocked SpeechRecognition** (and the mic hidden when the API is missing). chat-panel: open/close, focus return, backdrop, all three sides, `ui-send` (cancelable, Shift+Enter), `addMessage`/`messages`, busy, `prefers-reduced-motion`, store binding. progress (store binding): counting items that match `where` at `path`, ticks through `ui-each` moving the ring, explicit `max`, `{value}`/`{max}`/`{percent}` label placeholders, `ui-complete` once per crossing and re-armed, and the ring or the `<ui-store>` being removed and re-added (only the tick flow is recorded; `tests/media` is at its budget) | the contract of each element, in a real browser |
 | **C. `state`** | on `demo/shell.html`: swapping the outlet keeps the to-do items, **focus and caret** in an input with a stable id, typed text, scroll position and an open inline edit; removing and re-adding `<ui-store>` keeps data; `persist="local"` survives reload (and a schema version bump re-seeds); a `ui-action` from inside the outlet reaches a store in the shell; filtered views; chat history | the point of the stable shell |
 | **D. `sanitizer`** | 51 table-driven cases (script/iframe/object/embed, `on*` in every spelling, `javascript:` URLs with case/whitespace/entity tricks, nested and malformed markup, mXSS patterns) run through `sanitizeHtml`, then **inserted into a live page** to prove nothing executes; `ui-*` and layout tags survive; output is idempotent | swapped HTML is untrusted |
 | **E. `consume`** | a blank page on one origin imports components from a second origin that mimics the jsDelivr layout (`/gh/<user>/<repo>@<ref>/<path>`, CORS): relative `./_shared/*.js` imports work, every catalog module loads, `swapOutlet` finds `components.json` relative to itself; plus one online check against real jsDelivr (skips when offline or the tag does not exist) | proves the no-build, CDN-only promise |
@@ -100,6 +100,22 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `reset-data-restores-the-seed` | Regression test: "Reset data" on the live editor puts back exactly the four seed to-dos (it used to drop one), whether or not anything was changed. | ![demo-pages-reset-data-restores-the-seed](media/demo-pages-reset-data-restores-the-seed.gif) |
 | `injection-example-shows-what-was-removed` | The "Try to inject script" example lists exactly what the sanitizer removed (script, onclick, onerror, javascript: URL), the preview really is clean, and the ui-* component survives. | ![demo-pages-injection-example-shows-what-was-removed](media/demo-pages-injection-example-shows-what-was-removed.gif) |
 | `layouts-use-the-width-on-tablets` | On iPad-sized screens the demo pages fill the width (no narrow centered column), the two-column to-do layout is used only when wide enough to read, and stacks on iPad portrait. | ![demo-pages-layouts-use-the-width-on-tablets](media/demo-pages-layouts-use-the-width-on-tablets.gif) |
+
+</details>
+
+#### progress
+
+<details><summary>7 tests</summary>
+
+| Test | What it checks | Recording |
+|---|---|---|
+| `bound-count` | With `store` and `where`, value is the number of matching items and max the number of items; the ring fill and aria values follow, and the `value` attribute is ignored. | (no GIF) |
+| `toggle-through-ui-each-moves-the-ring` | Ticking and unticking to-dos rendered by ui-each (the toggle goes through a ui-action into the store) moves the bound ring up and down. | ![progress-toggle-through-ui-each-moves-the-ring](media/progress-toggle-through-ui-each-moves-the-ring.gif) |
+| `where-filtering-and-path` | `where` counts only matching items (dot paths and non-boolean values work), and `path` points at an array other than "items". | (no GIF) |
+| `explicit-max-overrides-the-count` | An explicit `max` attribute replaces the item count as the target: 3 of a 5-set goal is not complete even when all three items are done. | (no GIF) |
+| `label-placeholders` | `{value}`, `{max}` and `{percent}` in `label` are filled in and stay live, bound or not; text without placeholders is shown as is. | (no GIF) |
+| `complete-fires-once-per-crossing` | Ticking the last item fires ui-complete once and shows the done slot; further store changes while complete fire nothing; unticking re-arms it and the next crossing fires again. | (no GIF) |
+| `store-swapped-out-and-back` | The binding survives the ring being removed and re-added, the `<ui-store>` element being removed and re-added, a store declared after the ring, and `store` pointing elsewhere and back, without duplicate ui-complete events. | (no GIF) |
 
 </details>
 

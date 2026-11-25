@@ -97,7 +97,7 @@ ui-chat-panel { --ui-chat-panel-width: 24rem; }
 | `ui-chat-panel` | Slide-in chat panel with `ui-send` event; no backend assumed. Optional `store` binding |
 | `ui-store` | Non-visual named JSON state (optionally persisted) that survives UI swaps |
 | `ui-countdown` | Countdown timer with optional phases, start/pause, warning state and a done slot |
-| `ui-progress` | Progress ring or bar with a goal line, heading, image, deadline and a finish-line slot |
+| `ui-progress` | Progress ring or bar with a goal line, heading, image, deadline and a finish-line slot. Optional `store` binding: counts items matching `where` (e.g. checked to-dos), label placeholders `{value}`/`{max}`/`{percent}` |
 | `ui-each` | Renders one child component per item of a store array and maps its events to store actions |
 
 Full API for each is in the file header and in `components.json`. Design provenance: [`docs/inventory.md`](docs/inventory.md).
