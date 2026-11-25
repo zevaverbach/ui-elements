@@ -92,10 +92,11 @@
   </div>
 
   <h2>ui-countdown</h2>
-  <p class="note">Press Start. The second one runs two phases and shows a done slot at the end.</p>
+  <p class="note">Press Start. The second one runs two phases and shows a done slot at the end. The third counts down to a clock time (<code>until="17:00"</code>, tomorrow once it has passed) and starts by itself.</p>
   <div class="bar">
     <ui-countdown seconds="90" label="Start sprint"></ui-countdown>
     <ui-countdown phases='[{"name":"Focus","seconds":25},{"name":"Break","seconds":5}]'><span slot="done">Nice work!</span></ui-countdown>
+    <ui-countdown until="17:00"><span slot="done">Back!</span></ui-countdown>
   </div>
 
   <h2>ui-progress</h2>

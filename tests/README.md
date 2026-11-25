@@ -31,6 +31,7 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 |---|---|---|
 | **A. catalog** (`catalog-integrity`) | `components.json` parses; every component file has an entry, a header and a demo; every attribute, event, slot, method, property, part, CSS custom property and store action in the **source** matches the catalog and the file header, in both directions, with a diff when they disagree | agents trust the catalog instead of reading source; drift makes them write wrong HTML |
 | **B. `todo-item`, `chat-panel`** | attributes and properties, event names and `detail` shapes (and that they bubble and are composed), keyboard behavior, roles/labels/focus order. todo-item: toggle, progress steps, inline edit, confirm-delete including a vetoed cancelable `ui-delete`, mouse drag, keyboard and **touch** reorder, speech-to-text with a **mocked SpeechRecognition** (and the mic hidden when the API is missing). chat-panel: open/close, focus return, backdrop, all three sides, `ui-send` (cancelable, Shift+Enter), `addMessage`/`messages`, busy, `prefers-reduced-motion`, store binding | the contract of each element, in a real browser |
+| **B2. `countdown`** | `ui-countdown` with `until=` on Playwright's **fake clock** (Europe/Zurich, starting at 12:00): HH:MM, HH:MM:SS, past-time-means-tomorrow, ISO datetimes with and without an offset, a past ISO datetime, invalid values falling back to `seconds`, no drift when the clock jumps (sleep), warning state, `ui-tick` once per second, `ui-done` once, the done slot, `reset()` re-resolving the time | a clock-time countdown must follow the wall clock, and nothing waits in real time |
 | **C. `state`** | on `demo/shell.html`: swapping the outlet keeps the to-do items, **focus and caret** in an input with a stable id, typed text, scroll position and an open inline edit; removing and re-adding `<ui-store>` keeps data; `persist="local"` survives reload (and a schema version bump re-seeds); a `ui-action` from inside the outlet reaches a store in the shell; filtered views; chat history | the point of the stable shell |
 | **D. `sanitizer`** | 51 table-driven cases (script/iframe/object/embed, `on*` in every spelling, `javascript:` URLs with case/whitespace/entity tricks, nested and malformed markup, mXSS patterns) run through `sanitizeHtml`, then **inserted into a live page** to prove nothing executes; `ui-*` and layout tags survive; output is idempotent | swapped HTML is untrusted |
 | **E. `consume`** | a blank page on one origin imports components from a second origin that mimics the jsDelivr layout (`/gh/<user>/<repo>@<ref>/<path>`, CORS): relative `./_shared/*.js` imports work, every catalog module loads, `swapOutlet` finds `components.json` relative to itself; plus one online check against real jsDelivr (skips when offline or the tag does not exist) | proves the no-build, CDN-only promise |
@@ -86,6 +87,19 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `catalog-matches-loaded-modules` | components.json fetched from the CDN-style path lists modules that all load, and every catalog tag ends up defined. | ![consume-catalog-matches-loaded-modules](media/consume-catalog-matches-loaded-modules.gif) |
 | `swap-outlet-from-the-cdn-path` | swapOutlet imported from the CDN-style path swaps an outlet correctly. | ![consume-swap-outlet-from-the-cdn-path](media/consume-swap-outlet-from-the-cdn-path.gif) |
 | `online-real-jsdelivr` (online) | Online check against the real jsDelivr: the pinned tag serves the module and its _shared imports. | ![consume-online-real-jsdelivr](media/consume-online-real-jsdelivr.gif) |
+
+</details>
+
+#### countdown
+
+<details><summary>4 tests</summary>
+
+| Test | What it checks | Recording |
+|---|---|---|
+| `until-hh-mm` | until="13:00" at 12:00 counts down an hour from the clock: it starts by itself, hides the start button, ignores seconds and phases, and stays right after the clock jumps (sleep, background tab). | (no GIF) |
+| `until-past-means-tomorrow` | An HH:MM that has already passed today (11:30 at 12:00) means tomorrow; a time equal to now also means tomorrow, and 24-hour times and HH:MM:SS work. | (no GIF) |
+| `until-iso` | until takes a full ISO datetime, with an offset or in local time; one already past is done at once; an unparseable value falls back to seconds. | (no GIF) |
+| `until-done-and-warn` | A countdown to a time a few seconds away ticks every second, enters the warning state, then fires ui-done once and shows the done slot. | ![countdown-until-done-and-warn](media/countdown-until-done-and-warn.gif) |
 
 </details>
 

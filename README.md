@@ -96,7 +96,7 @@ ui-chat-panel { --ui-chat-panel-width: 24rem; }
 | `ui-todo-item` | To-do item: check, inline edit, confirm-delete, progress steps, speech-to-text mic (Web Speech API, or a host backend via `setTranscriber(async (blob, {mime, lang}) => text)` from `_shared/speech.js` when unsupported or `speech="backend"`; backend must accept webm/opus and mp4/AAC), drag/keyboard/touch reorder |
 | `ui-chat-panel` | Slide-in chat panel with `ui-send` event; no backend assumed. Optional `store` binding |
 | `ui-store` | Non-visual named JSON state (optionally persisted) that survives UI swaps |
-| `ui-countdown` | Countdown timer with optional phases, start/pause, warning state and a done slot |
+| `ui-countdown` | Countdown timer for a duration (with optional phases) or to a clock time (`until`), start/pause, warning state and a done slot |
 | `ui-progress` | Progress ring or bar with a goal line, heading, image, deadline and a finish-line slot |
 | `ui-each` | Renders one child component per item of a store array and maps its events to store actions |
 

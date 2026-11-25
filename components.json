@@ -494,7 +494,7 @@
     {
       "tag": "ui-countdown",
       "file": "components/ui-countdown.js",
-      "description": "A countdown timer with optional phases (focus, break, ...), a built-in start/pause button, a low-time warning state and a done slot.",
+      "description": "A countdown timer for a duration (with optional phases: focus, break, ...) or to a clock time (until=\"13:00\"), with a built-in start/pause button, a low-time warning state and a done slot.",
       "attributes": [
         {
           "name": "seconds",
@@ -504,7 +504,12 @@
         {
           "name": "phases",
           "type": "JSON",
-          "description": "Array of {name, seconds}, run in order, then ui-done."
+          "description": "Array of {name, seconds}, run in order, then ui-done. Ignored when until is set."
+        },
+        {
+          "name": "until",
+          "type": "string",
+          "description": "Count down to a clock time instead of a duration: \"HH:MM\" (or \"HH:MM:SS\", local time today, or tomorrow if it has already passed) or a full ISO datetime (\"2026-12-01T13:00\"). Replaces seconds, ignores phases, starts automatically, hides the start/pause button, and reads remaining from the clock so it does not drift in a background tab or after sleep. A datetime already past is done at once."
         },
         {
           "name": "running",
@@ -529,7 +534,7 @@
       ],
       "properties": [
         "running",
-        "remaining (read-only, whole seconds left in the phase)"
+        "remaining (read-only, whole seconds left in the phase; from the clock with until)"
       ],
       "methods": [
         "start()",
