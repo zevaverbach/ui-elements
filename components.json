@@ -490,6 +490,180 @@
       ],
       "composed-in": [],
       "notes": "The child tag is supplied by `tag`, so any component whose attributes and events fit map/events works. ui-each must have a ui-store with the same name somewhere in the page (stores are routed by name)."
+    },
+    {
+      "tag": "ui-countdown",
+      "file": "components/ui-countdown.js",
+      "description": "A countdown timer with optional phases (focus, break, ...), a built-in start/pause button, a low-time warning state and a done slot.",
+      "attributes": [
+        {
+          "name": "seconds",
+          "type": "number",
+          "description": "Duration when there are no phases. Default 60."
+        },
+        {
+          "name": "phases",
+          "type": "JSON",
+          "description": "Array of {name, seconds}, run in order, then ui-done."
+        },
+        {
+          "name": "running",
+          "type": "boolean",
+          "description": "Counting down while present. Reflects state."
+        },
+        {
+          "name": "autostart",
+          "type": "boolean",
+          "description": "Start as soon as connected."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "description": "Start button text before it has been started. Default \"Start\"."
+        },
+        {
+          "name": "warn",
+          "type": "number",
+          "description": "Seconds left at which the warning state begins. Default 10."
+        }
+      ],
+      "properties": [
+        "running",
+        "remaining (read-only, whole seconds left in the phase)"
+      ],
+      "methods": [
+        "start()",
+        "pause()",
+        "reset()"
+      ],
+      "slots": [
+        {
+          "name": "done",
+          "description": "Shown instead of the time once the last phase reaches zero."
+        }
+      ],
+      "events": [
+        {
+          "name": "ui-tick",
+          "detail": "{remaining: number, phase: string, index: number}",
+          "description": "Once per whole second while running."
+        },
+        {
+          "name": "ui-phase",
+          "detail": "{index: number, name: string}",
+          "description": "A new phase began (not fired for the first)."
+        },
+        {
+          "name": "ui-done",
+          "detail": "{}",
+          "description": "The last phase reached zero."
+        }
+      ],
+      "cssCustomProperties": [
+        "--ui-countdown-bg",
+        "--ui-countdown-text",
+        "--ui-countdown-accent",
+        "--ui-countdown-warn"
+      ],
+      "parts": [
+        "box",
+        "phase",
+        "time",
+        "bar",
+        "button"
+      ],
+      "composes-well-with": [
+        "ui-progress",
+        "ui-todo-item"
+      ],
+      "composed-in": [],
+      "notes": "Needs no script: set seconds or phases and it ticks by itself. Listen for ui-done to react."
+    },
+    {
+      "tag": "ui-progress",
+      "file": "components/ui-progress.js",
+      "description": "A progress ring or bar with an optional goal line and a finish-line state: heading, meta line (deadline), a motivating image and a done slot.",
+      "attributes": [
+        {
+          "name": "value",
+          "type": "number",
+          "description": "Current amount. Default 0."
+        },
+        {
+          "name": "max",
+          "type": "number",
+          "description": "Amount that means done. Default 100."
+        },
+        {
+          "name": "variant",
+          "type": "ring|bar",
+          "description": "Shape. Default ring."
+        },
+        {
+          "name": "goal",
+          "type": "number",
+          "description": "Draws a goal line at this amount on the value/max scale."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "description": "Text shown with the graphic. Default the percentage."
+        },
+        {
+          "name": "heading",
+          "type": "string",
+          "description": "Title of the goal."
+        }
+      ],
+      "properties": [
+        "value",
+        "max",
+        "percent (read-only, 0-100)"
+      ],
+      "methods": [
+        "increment(by?)"
+      ],
+      "slots": [
+        {
+          "name": "meta",
+          "description": "Under the graphic: deadline, time left, notes."
+        },
+        {
+          "name": "image",
+          "description": "Always shown: the picture of the finished state."
+        },
+        {
+          "name": "done",
+          "description": "Shown in place of the label once value >= max."
+        }
+      ],
+      "events": [
+        {
+          "name": "ui-complete",
+          "detail": "{value: number, max: number}",
+          "description": "Value reached max (once per crossing)."
+        }
+      ],
+      "cssCustomProperties": [
+        "--ui-progress-bg",
+        "--ui-progress-track",
+        "--ui-progress-accent",
+        "--ui-progress-done",
+        "--ui-progress-goal"
+      ],
+      "parts": [
+        "card",
+        "heading",
+        "graphic",
+        "label"
+      ],
+      "composes-well-with": [
+        "ui-countdown",
+        "ui-todo-item",
+        "ui-store"
+      ],
+      "composed-in": [],
+      "notes": "Doubles as the goal card: heading + image + meta + done slots."
     }
   ],
   "compositions": [

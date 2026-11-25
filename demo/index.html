@@ -91,6 +91,21 @@
     <ui-todo-item text="Book the dentist" checked></ui-todo-item>
   </div>
 
+  <h2>ui-countdown</h2>
+  <p class="note">Press Start. The second one runs two phases and shows a done slot at the end.</p>
+  <div class="bar">
+    <ui-countdown seconds="90" label="Start sprint"></ui-countdown>
+    <ui-countdown phases='[{"name":"Focus","seconds":25},{"name":"Break","seconds":5}]'><span slot="done">Nice work!</span></ui-countdown>
+  </div>
+
+  <h2>ui-progress</h2>
+  <p class="note">A ring with a goal line, a bar, and a finished state with the done slot.</p>
+  <div class="bar">
+    <ui-progress heading="Ship the feature" value="3" max="5" goal="4" label="3 of 5 tasks"><small slot="meta">Standup at 10:00</small></ui-progress>
+    <ui-progress variant="bar" heading="Spend today" value="62" max="100" goal="80" label="$62 of $80"></ui-progress>
+    <ui-progress heading="Lifts" value="12" max="12" label="12 of 12 sets"><span slot="done">Done! 💪</span></ui-progress>
+  </div>
+
   <h2>Event log</h2>
   <pre id="log" aria-live="off">(events appear here)</pre>
 </main>
@@ -104,6 +119,8 @@
 <script type="module" src="../components/ui-chat-panel.js"></script>
 <script type="module" src="../components/ui-store.js"></script>
 <script type="module" src="../components/ui-each.js"></script>
+<script type="module" src="../components/ui-countdown.js"></script>
+<script type="module" src="../components/ui-progress.js"></script>
 <script type="module">
   import { setTranscriber } from '../components/_shared/speech.js';
   // Stub backend STT so the fallback path (e.g. Firefox, or speech="backend") is demonstrable.
