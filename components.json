@@ -612,7 +612,7 @@
         {
           "name": "heading",
           "type": "string",
-          "description": "Title of the goal."
+          "description": "Title of the goal; also the progress bar's accessible name (else the label)."
         }
       ],
       "properties": [

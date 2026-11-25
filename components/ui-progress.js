@@ -25,8 +25,9 @@
 //
 // Methods: increment(by?)  adds by (default 1) to value, capped at max
 //
-// Accessibility: role="progressbar" with aria-valuenow/min/max and the label as its text; completion
-// is announced politely. The fill animates unless prefers-reduced-motion.
+// Accessibility: role="progressbar" named by the heading (or the label), with aria-valuenow/min/max
+// and the label as its aria-valuetext; completion is announced politely. The fill animates unless
+// prefers-reduced-motion.
 //
 // CSS custom properties (all optional; fall back to the shared --ui-* tokens in tokens.css):
 //   --ui-progress-bg, --ui-progress-track, --ui-progress-accent, --ui-progress-done, --ui-progress-goal
@@ -140,8 +141,10 @@ class UiProgress extends HTMLElement {
     this._graphic.setAttribute('aria-valuemax', String(this.max));
     this._graphic.setAttribute('aria-valuenow', String(Math.min(this.value, this.max)));
     this._graphic.setAttribute('aria-valuetext', label);
+    this._graphic.setAttribute('aria-label', this.getAttribute('heading') || label);
 
-    this._ring.hidden = !ring;
+    // SVG elements have no `hidden` property, so toggle the attribute
+    this._ring.toggleAttribute('hidden', !ring);
     this._center.hidden = !ring;
     this._bar.hidden = ring;
     this._barLabel.hidden = ring;
@@ -152,12 +155,12 @@ class UiProgress extends HTMLElement {
     this._label.textContent = label;
     this._barLabel.textContent = showDone ? '' : label;
     if (showDone && !ring) this._barLabel.append(this._doneSlot);
-    else if (!ring) this._barLabel.hidden = false;
+    else if (this._doneSlot.parentNode !== this._center) this._center.append(this._doneSlot);
 
     this._ringFill.style.strokeDashoffset = String(C * (1 - pct / 100));
     this._barFill.style.width = `${pct}%`;
 
-    this._ringGoal.hidden = goalPct === null;
+    this._ringGoal.toggleAttribute('hidden', goalPct === null);
     if (goalPct !== null) {
       // a short tick on the ring: a dash of 1.5% of the circumference, offset to the goal angle
       this._ringGoal.setAttribute('stroke-dasharray', `${C * 0.015} ${C}`);
