@@ -18,7 +18,8 @@ tests/agent-evals/
 | `todo-progress` | page | standalone `ui-todo-item`s with progress steps, no store |
 | `chat-left` | page | `ui-chat-panel` `side`, slotted message, placeholder |
 | `kanban` | page | three `where` views over one store, two-step delete reaching the store |
-| `needs-new-behavior` | **request** | a countdown timer: no component can do it, so the correct output is a **written request for a new component** (`ui-*` tag, attributes, events, why nothing existing fits), *not* inline script |
+| `timer-60` | page | `ui-countdown` `seconds`/`label` and a `done` slot as the reaction at zero, no script |
+| `glance-dashboard` | **request** | a live "is everything okay?" status dashboard bound to a store: no component can do it, so the correct output is a **written request for a new component** (`ui-*` tag, attributes, events, why nothing existing fits), *not* inline script |
 
 ## What the checker verifies
 
@@ -41,7 +42,7 @@ out/<task-id>.meta.json       optional measurements (below)
 
 ```sh
 python3 tests/agent-evals/check.py --task shopping-list --html out/shopping-list.html     # one output
-python3 tests/agent-evals/check.py --task needs-new-behavior --request out/needs-new-behavior.request.md
+python3 tests/agent-evals/check.py --task glance-dashboard --request out/glance-dashboard.request.md
 python3 tests/agent-evals/run_evals.py --outputs out/ --out results.json                  # everything
 ```
 

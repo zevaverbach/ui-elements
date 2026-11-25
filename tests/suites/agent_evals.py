@@ -1,6 +1,6 @@
 """Suite F: agent composition evals. The golden solutions must pass the checker; every kind of bad output must be rejected
 with the right reason. No LLM is involved: this proves the checker works, so it can be trusted on real agent output."""
-import json, os, subprocess, sys, tempfile
+import json, os, re, subprocess, sys, tempfile
 from registry import test, env
 from helpers import check, eq
 
@@ -19,6 +19,7 @@ GOLDEN_DESC = {
     "todo-progress": "The reference page for the release-checklist task (three to-dos with progress steps, no store) passes the checker and its browser assertions.",
     "chat-left": "The reference page for the support-chat task (a chat panel that opens from the left with a placeholder and a first message) passes the checker and its browser assertions.",
     "kanban": "The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions.",
+    "timer-60": "The reference page for the 60-second timer task (a ui-countdown with a \"Time's up!\" done slot, no script) passes the checker: it starts on click, counts down, and at zero fires ui-done and shows the done slot.",
 }
 
 def golden_test(task_id, **kw):
@@ -31,15 +32,15 @@ def golden_test(task_id, **kw):
         check(res["passed"], f"golden solution for {task_id} was rejected: {explain(res)}")
     return _
 
-for _id in ("shopping-list", "todo-progress", "chat-left", "kanban"):
+for _id in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
     golden_test(_id)
 
-@test("agent-evals", "golden-needs-new-behavior-is-a-request", desc='For a task no component can do (a countdown timer), the correct answer is a written request for a new component with no inline script, and the checker accepts it.', viewport={"width": 640, "height": 300})
+@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task no component can do (a live status dashboard), the correct answer is a written request for a new component with no inline script, and the checker accepts it.', viewport={"width": 640, "height": 300})
 def _(t):
-    task = ev.load_task("needs-new-behavior")
+    task = ev.load_task("glance-dashboard")
     t.step("Task: " + task["title"])
     t.step("Correct output: a written request for a new component, no script")
-    res = ev.check_output(t, task, request=golden("needs-new-behavior", ".request.md"))
+    res = ev.check_output(t, task, request=golden("glance-dashboard", ".request.md"))
     check(res["passed"], explain(res))
     t.step("Verdict: PASS (the request names a new tag, attributes, events and why nothing existing fits)")
 
@@ -88,15 +89,16 @@ def _(t):
 
 @test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes.', viewport={"width": 640, "height": 300})
 def _(t):
-    task = ev.load_task("needs-new-behavior")
-    good = golden("needs-new-behavior", ".request.md")
+    task = ev.load_task("glance-dashboard")
+    good = golden("glance-dashboard", ".request.md")
+    unaware = re.sub("store", "source", re.sub("status", "widget", good, flags=re.I), flags=re.I)
     cases = [
-        ("inline script instead of a request", dict(html="<main id='outlet'><button id='b'>Start timer</button><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
-        ("onclick instead of a request",       dict(html="<main id='outlet'><button onclick=\"start()\">Start timer</button></main>", request=good), "inline-handler"),
+        ("inline script instead of a request", dict(html="<main id='outlet'><p id='server'>Server</p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
+        ("onclick instead of a request",       dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
         ("no request at all",                  dict(html=None, request=None), "request-incomplete"),
-        ("a request that proposes nothing new", dict(request="I added a timer using ui-todo-item and ui-each. It works. " * 8), "request-incomplete"),
-        ("too short",                          dict(request="Please add ui-countdown."), "request-incomplete"),
-        ("ignores the capability",             dict(request=good.replace("countdown", "widget").replace("seconds", "units")), "request-incomplete"),
+        ("a request that proposes nothing new", dict(request="I built the dashboard with ui-todo-item and ui-each over a store. It works. " * 8), "request-incomplete"),
+        ("too short",                          dict(request="Please add ui-status."), "request-incomplete"),
+        ("ignores the capability",             dict(request=unaware), "request-incomplete"),
     ]
     wrong = []
     for name, kw, code in cases:
@@ -113,9 +115,9 @@ def _(t):
     check(out.returncode == 0 and out.stdout.startswith("PASS kanban"), out.stdout + out.stderr)
     t.step("run_evals.py scores a folder of outputs and aggregates the metrics")
     d = tempfile.mkdtemp()
-    for tid in ("shopping-list", "todo-progress", "chat-left", "kanban"):
+    for tid in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
         open(os.path.join(d, tid + ".html"), "w").write(golden(tid))
-    open(os.path.join(d, "needs-new-behavior.request.md"), "w").write(golden("needs-new-behavior", ".request.md"))
+    open(os.path.join(d, "glance-dashboard.request.md"), "w").write(golden("glance-dashboard", ".request.md"))
     for tid, it, tin, tout in (("shopping-list", 2, 12000, 3000), ("kanban", 1, 9000, 2500)):
         json.dump({"iterations": it, "tokens_in": tin, "tokens_out": tout}, open(os.path.join(d, tid + ".meta.json"), "w"))
     # break one output: it must show up as a failure and lower the success rate
@@ -124,7 +126,7 @@ def _(t):
     run = subprocess.run([sys.executable, os.path.join(EVALS, "run_evals.py"), "--outputs", d, "--out", res_file], capture_output=True, text=True)
     check(run.returncode == 1, "a failing task makes run_evals exit 1")
     r = json.load(open(res_file))["summary"]
-    eq((r["tasks"], r["passed"]), (5, 4))
-    eq(r["success_rate"], 0.8); eq(r["failures_by_code"], {"inline-script": 1})
+    eq((r["tasks"], r["passed"]), (6, 5))
+    eq(r["success_rate"], 0.833); eq(r["failures_by_code"], {"inline-script": 1})
     eq(r["mean_iterations_to_pass"], 1.5)
     eq(r["mean_tokens_per_passing_task"], 13250.0)

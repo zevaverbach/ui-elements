@@ -1,0 +1,10 @@
+{
+ "id": "glance-dashboard",
+ "title": "A glance dashboard no component can do: the right answer is a request, not script",
+ "kind": "request",
+ "prompt": "Build a glance dashboard that answers \"is everything okay?\": one row each for \"Baby\" (sleeping), \"Package\" (en route) and \"Server\" (up). Each row shows a label, a state (ok, warn or bad, not given by color alone) and a short detail line. The values arrive in a <ui-store> and the rows must update live when the store changes, with no script. If the library's components cannot do this, do NOT write inline script or onclick handlers. Instead write a request for a new component (request.md): what is missing, why no existing component can do it, and the proposed tag with its attributes, events, slots and CSS custom properties, following CLAUDE.md.",
+ "must_mention": [
+  "status",
+  "store"
+ ]
+}
