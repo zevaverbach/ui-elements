@@ -19,7 +19,7 @@ tests/agent-evals/
 | `chat-left` | page | `ui-chat-panel` `side`, slotted message, placeholder |
 | `kanban` | page | three `where` views over one store, two-step delete reaching the store |
 | `timer-60` | page | `ui-countdown` `seconds`/`label` and a `done` slot as the reaction at zero, no script |
-| `glance-dashboard` | **request** | a live "is everything okay?" status dashboard bound to a store: no component can do it, so the correct output is a **written request for a new component** (`ui-*` tag, attributes, events, why nothing existing fits), *not* inline script |
+| `glance-dashboard` | **request** | not a checklist: an "is everything okay?" dashboard (baby, package, server) whose ok/warn/bad rows update live from a `ui-store`. No component shows a labelled status, and a to-do list dressed up as a dashboard does not count, so the correct output is a **request for `ui-status`** (state, label, detail, store binding, a change event) |
 
 ## What the checker verifies
 
@@ -62,4 +62,4 @@ Per task, in `<task-id>.meta.json` (all optional, all numbers except `model`):
 
 1. `tasks/<id>.json`: `id`, `title`, `kind` (`page` or `request`), `prompt`, and for pages `shell: true` plus `assert`: a list of steps, each with a caption `step` and one of `eval` (JS expression, with `equals`, default `true`), `click`, `fill`+`text` or `wait`. Assertions must not depend on the agent's ids: find things by text and structure.
 2. `golden/<id>.html` that passes (or `golden/<id>.request.md`).
-3. Add it to the lists in `tests/suites/agent_evals.py`. `python3 tests/run.py --suite agent-evals` must stay green: the suite proves the golden passes and that 23 kinds of bad output are rejected.
+3. Add it to the lists in `tests/suites/agent_evals.py`. `python3 tests/run.py --suite agent-evals` must stay green: the suite proves the golden passes and that 29 kinds of bad output are rejected.
