@@ -5,15 +5,23 @@
 //   <script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/ui-countdown.js"></script>
 //   <ui-countdown seconds="90" label="Start sprint"></ui-countdown>
 //   <ui-countdown phases='[{"name":"Focus","seconds":1500},{"name":"Break","seconds":300}]'></ui-countdown>
+//   <ui-countdown until="13:00"><span slot="done">Back!</span></ui-countdown>
 //
 // Attributes / properties:
 //   seconds    number    total duration when there are no phases (default 60)
 //   phases     JSON      array of {name: string, seconds: number}; runs them in order, then fires ui-done
+//   until      string    count down to a clock time instead of a duration: "HH:MM" (or "HH:MM:SS"), local
+//                        time today, or tomorrow if that time has already passed; or a full ISO datetime
+//                        ("2026-12-01T13:00", "2026-12-01T12:00:00Z"). When set and valid it replaces
+//                        `seconds`, `phases` is ignored, it starts automatically, the start/pause button is
+//                        hidden, and `remaining` is read from the clock, so a background tab or sleep does
+//                        not make it drift. A datetime already in the past is done at once. reset()
+//                        resolves the time again (so after an "HH:MM" countdown ends it means tomorrow).
 //   running    boolean   counting down while present (reflects; prop: running)
 //   autostart  boolean   start as soon as the element is connected
 //   label      string    text of the start button before it has been started (default "Start")
 //   warn       number    seconds left at which the warning state begins (default 10)
-//   (prop) remaining   read-only: whole seconds left in the current phase
+//   (prop) remaining   read-only: whole seconds left in the current phase (from the clock with `until`)
 //
 // Slots:
 //   done       shown instead of the time once the last phase reaches zero
@@ -67,8 +75,27 @@ const fmt = (s) => {
   return m >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}:${sec}` : `${m}:${sec}`;
 };
 
+// "HH:MM[:SS]" -> the next such local time (today, or tomorrow if it has passed); otherwise a full
+// ISO datetime. Returns epoch ms, or null when unset or unparseable.
+const parseUntil = (v) => {
+  v = (v || '').trim();
+  if (!v) return null;
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(v);
+  if (m) {
+    const [h, min, sec] = [Number(m[1]), Number(m[2]), Number(m[3] || 0)];
+    if (h > 23 || min > 59 || sec > 59) return null;
+    const now = new Date();
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, min, sec);
+    if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)) return null;
+  const t = Date.parse(v);
+  return Number.isNaN(t) ? null : t;
+};
+
 class UiCountdown extends HTMLElement {
-  static observedAttributes = ['seconds', 'phases', 'running', 'label', 'warn'];
+  static observedAttributes = ['seconds', 'phases', 'until', 'running', 'label', 'warn'];
 
   constructor() {
     super();
@@ -101,7 +128,7 @@ class UiCountdown extends HTMLElement {
 
   connectedCallback() {
     this._render();
-    if (this.hasAttribute('autostart') && !this._started) this.start();
+    if ((this._target !== null || this.hasAttribute('autostart')) && !this._started) this.start();
     else if (this.hasAttribute('running')) this._begin();
   }
 
@@ -109,13 +136,17 @@ class UiCountdown extends HTMLElement {
 
   attributeChangedCallback(name) {
     if (name === 'running') { if (this.hasAttribute('running')) this._begin(); else this._halt(); return; }
-    if (name === 'seconds' || name === 'phases') { if (!this._started) this._load(); }
+    if (name === 'until') { this.removeAttribute('running'); this._halt(); this._started = false; this._load(); if (this.isConnected && this._target !== null) this.start(); }
+    else if (name === 'seconds' || name === 'phases') { if (!this._started) this._load(); }
     this._render();
   }
 
   get running() { return this.hasAttribute('running'); }
   set running(v) { this.toggleAttribute('running', !!v); }
-  get remaining() { return Math.ceil(this._left); }
+  get remaining() {
+    if (this._target !== null && !this._done) return Math.max(0, Math.ceil((this._target - Date.now()) / 1000));
+    return Math.ceil(this._left);
+  }
 
   start() {
     if (this._done) this.reset();
@@ -131,13 +162,17 @@ class UiCountdown extends HTMLElement {
     this._started = false;
     this._load();
     this._render();
+    if (this._target !== null && this.isConnected) this.start();
   }
 
   _load() {
+    this._target = parseUntil(this.getAttribute('until'));
     let phases = null;
     try { phases = JSON.parse(this.getAttribute('phases') || 'null'); } catch { phases = null; }
     if (!Array.isArray(phases) || !phases.length) phases = [{ name: '', seconds: Number(this.getAttribute('seconds')) || 60 }];
     this._phases = phases.map((p) => ({ name: String(p.name ?? ''), seconds: Math.max(1, Number(p.seconds) || 1) }));
+    // until replaces seconds and phases; the single phase's length is the time left now (for the bar)
+    if (this._target !== null) this._phases = [{ name: '', seconds: Math.max(0, (this._target - Date.now()) / 1000) }];
     this._i = 0;
     this._left = this._phases[0].seconds;
     this._done = false;
@@ -147,9 +182,9 @@ class UiCountdown extends HTMLElement {
   _begin() {
     if (this._timer || this._done) return;
     this._started = true;
-    this._end = Date.now() + this._left * 1000;
+    this._end = this._target ?? Date.now() + this._left * 1000;
     this._timer = setInterval(() => this._step(), 200);
-    this._render();
+    this._step();
   }
 
   _halt() {
@@ -203,7 +238,8 @@ class UiCountdown extends HTMLElement {
     this._doneEl.hidden = !(this._done && this.querySelector('[slot="done"]'));
     this._timeEl.textContent = fmt(this._left);
     this._phaseEl.textContent = this._phases.length > 1 ? `${p.name || 'Phase'} · ${this._i + 1} of ${this._phases.length}` : p.name;
-    this._fill.style.width = `${Math.min(100, Math.max(0, (1 - this._left / p.seconds) * 100))}%`;
+    this._fill.style.width = `${p.seconds > 0 ? Math.min(100, Math.max(0, (1 - this._left / p.seconds) * 100)) : 100}%`;
+    this._btn.hidden = this._target !== null;
     this._btn.textContent = this.running ? 'Pause' : this._done ? 'Restart' : this._started ? 'Resume' : this.getAttribute('label') || 'Start';
     if (this._btn.textContent === 'Pause') this._btn.dataset.secondary = ''; else delete this._btn.dataset.secondary;
   }
