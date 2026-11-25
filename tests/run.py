@@ -118,7 +118,7 @@ def main():
                 entry = registry.catalog_entry(spec.component) if spec.component else None
                 r = run_test(browser, spec.full, lambda t, f=spec.fn: f(t), base_dir=HERE, record_gif=a.gifs and spec.gif,
                              base_url=env.base, catalog_entry=entry, init_scripts=spec.init_scripts, dwell=dwell,
-                             known_issue=spec.known_issue, setup=make_setup(spec), **{"color_scheme": "dark", **spec.context})
+                             known_issue=spec.known_issue, setup=make_setup(spec), gif_ladder=spec.gif_ladder, **{"color_scheme": "dark", **spec.context})
                 results.append(r)
                 print(f"{ICON[r.status]:5} {r.name:46} {r.seconds:5.1f}s" + (f"  {r.gif_bytes // 1024} KB gif" if r.gif else "")
                       + (f"  {r.message.splitlines()[0][:110]}" if r.message and r.status != "passed" else ""), flush=True)
