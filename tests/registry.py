@@ -24,14 +24,15 @@ class Spec:
     desc: str = ""
     context: dict = field(default_factory=dict)
     init_scripts: list = field(default_factory=list)
+    gif_ladder: list | None = None
 
     @property
     def full(self):
         return f"{self.suite}-{self.name}"
 
-def test(suite, name, component=None, online=False, known_issue=None, needs_idiomorph=False, init_scripts=(), gif=True, desc="", **context):
+def test(suite, name, component=None, online=False, known_issue=None, needs_idiomorph=False, init_scripts=(), gif=True, desc="", gif_ladder=None, **context):
     def deco(fn):
-        TESTS.append(Spec(suite, name, fn, component, online, known_issue, needs_idiomorph, gif, desc, context, list(init_scripts)))
+        TESTS.append(Spec(suite, name, fn, component, online, known_issue, needs_idiomorph, gif, desc, context, list(init_scripts), gif_ladder))
         return fn
     return deco
 
