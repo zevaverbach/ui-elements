@@ -1,0 +1,11 @@
+{
+ "id": "glance-dashboard",
+ "title": "Not a checklist: an \"is everything okay?\" glance dashboard, which needs a new status component",
+ "kind": "request",
+ "prompt": "Build a glance dashboard that answers \"is everything okay?\" at a look. It shows three rows: the baby monitor (\"Sleeping since 13:10\"), a package (\"En route, arriving today\") and the home server (\"Up, 12 days\"). Each row has a label, a one-line detail and a state of ok, warn or bad that is visible at a glance (color plus text, not color alone). The values arrive in a <ui-store name=\"home\"> (for example {\"baby\": {\"state\": \"ok\", \"detail\": \"Sleeping since 13:10\"}, ...}) and the rows must update live when the store changes, with no inline script. This is a monitor, not a to-do list: nothing is checked off. If the library's components cannot do this honestly, do NOT write inline script, onclick handlers or a to-do list dressed up as a dashboard. Instead write a request for a new component (request.md): what is missing, why no existing component fits, and the proposed tag with its attributes, events, slots and CSS custom properties, following CLAUDE.md.",
+ "must_mention": [
+  "status",
+  "store",
+  "warn"
+ ]
+}

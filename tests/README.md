@@ -34,7 +34,7 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 | **C. `state`** | on `demo/shell.html`: swapping the outlet keeps the to-do items, **focus and caret** in an input with a stable id, typed text, scroll position and an open inline edit; removing and re-adding `<ui-store>` keeps data; `persist="local"` survives reload (and a schema version bump re-seeds); a `ui-action` from inside the outlet reaches a store in the shell; filtered views; chat history | the point of the stable shell |
 | **D. `sanitizer`** | 51 table-driven cases (script/iframe/object/embed, `on*` in every spelling, `javascript:` URLs with case/whitespace/entity tricks, nested and malformed markup, mXSS patterns) run through `sanitizeHtml`, then **inserted into a live page** to prove nothing executes; `ui-*` and layout tags survive; output is idempotent | swapped HTML is untrusted |
 | **E. `consume`** | a blank page on one origin imports components from a second origin that mimics the jsDelivr layout (`/gh/<user>/<repo>@<ref>/<path>`, CORS): relative `./_shared/*.js` imports work, every catalog module loads, `swapOutlet` finds `components.json` relative to itself; plus one online check against real jsDelivr (skips when offline or the tag does not exist) | proves the no-build, CDN-only promise |
-| **F. `agent-evals`** | tasks, golden solutions and a checker (tags, attributes, script rules, wiring, console errors, task assertions). The goldens must pass; 23 kinds of bad output must be rejected with the right code, including inline script on the one task no component can do, where the right answer is a written request for a new component | lets you measure agents without an LLM in the repo; see [agent-evals/README.md](agent-evals/README.md) |
+| **F. `agent-evals`** | tasks, golden solutions and a checker (tags, attributes, script rules, wiring, console errors, task assertions). The goldens must pass; 29 kinds of bad output must be rejected with the right code, including inline script or a to-do list dressed up as a dashboard on the request tasks (a countdown timer, a status dashboard), where the right answer is a written request for a new component | lets you measure agents without an LLM in the repo; see [agent-evals/README.md](agent-evals/README.md) |
 | **G. `visual`, `demo-pages`** | light/dark screenshots of every demo page (only the dark pass is recorded) (background luminance, no horizontal overflow, non-blank, light != dark), an axe-core pass (online), and the framework-free assertion pages `demo/sanitizer-test.html` and `demo/store-test.html` | catches theming and accessibility regressions |
 
 ## Recordings
@@ -43,7 +43,7 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 
 #### agent-evals
 
-<details><summary>8 tests</summary>
+<details><summary>10 tests</summary>
 
 | Test | What it checks | Recording |
 |---|---|---|
@@ -52,8 +52,10 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `golden-chat-left` | The reference page for the support-chat task (a chat panel that opens from the left with a placeholder and a first message) passes the checker and its browser assertions. | ![agent-evals-golden-chat-left](media/agent-evals-golden-chat-left.gif) |
 | `golden-kanban` | The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions. | ![agent-evals-golden-kanban](media/agent-evals-golden-kanban.gif) |
 | `golden-needs-new-behavior-is-a-request` | For a task no component can do (a countdown timer), the correct answer is a written request for a new component with no inline script, and the checker accepts it. | ![agent-evals-golden-needs-new-behavior-is-a-request](media/agent-evals-golden-needs-new-behavior-is-a-request.gif) |
+| `golden-glance-dashboard-is-a-request` | For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it. | ![agent-evals-golden-glance-dashboard-is-a-request](media/agent-evals-golden-glance-dashboard-is-a-request.gif) |
 | `checker-rejects-bad-output` | Each of a set of deliberately broken pages (unknown tags, script, on* handlers, broken wiring, missing ids and so on) is rejected by the checker with the right reason. | ![agent-evals-checker-rejects-bad-output](media/agent-evals-checker-rejects-bad-output.gif) |
 | `checker-rejects-cheating-on-the-impossible-task` | Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes. | ![agent-evals-checker-rejects-cheating-on-the-impossible-task](media/agent-evals-checker-rejects-cheating-on-the-impossible-task.gif) |
+| `checker-rejects-cheating-on-the-dashboard` | Answering the dashboard task with a to-do list dressed up as a dashboard, inline script, or a request that ignores the store or the warn state is rejected; only a proper ui-status request passes. | ![agent-evals-checker-rejects-cheating-on-the-dashboard](media/agent-evals-checker-rejects-cheating-on-the-dashboard.gif) |
 | `cli-and-aggregate-scoring` | check.py works as a command-line tool, and run_evals.py scores a folder of outputs and aggregates success rate and iterations. | (no GIF) |
 
 </details>

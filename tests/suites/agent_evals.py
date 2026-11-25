@@ -1,6 +1,6 @@
 """Suite F: agent composition evals. The golden solutions must pass the checker; every kind of bad output must be rejected
 with the right reason. No LLM is involved: this proves the checker works, so it can be trusted on real agent output."""
-import json, os, subprocess, sys, tempfile
+import json, os, re, subprocess, sys, tempfile
 from registry import test, env
 from helpers import check, eq
 
@@ -42,6 +42,15 @@ def _(t):
     res = ev.check_output(t, task, request=golden("needs-new-behavior", ".request.md"))
     check(res["passed"], explain(res))
     t.step("Verdict: PASS (the request names a new tag, attributes, events and why nothing existing fits)")
+
+@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it.', viewport={"width": 640, "height": 300})
+def _(t):
+    task = ev.load_task("glance-dashboard")
+    t.step("Task: " + task["title"][:80])
+    t.step("Correct output: a written request for a status component, no script")
+    res = ev.check_output(t, task, request=golden("glance-dashboard", ".request.md"))
+    check(res["passed"], explain(res))
+    t.step("Verdict: PASS (the request proposes ui-status with store binding and says why nothing existing fits)")
 
 # (name, task, mutate(html) -> html, expected issue code)
 SHOP = "shopping-list"
@@ -106,6 +115,28 @@ def _(t):
             wrong.append(f"{name}: {explain(res) or 'PASS'}")
     check(not wrong, "; ".join(wrong))
 
+@test("agent-evals", "checker-rejects-cheating-on-the-dashboard", desc='Answering the dashboard task with a to-do list dressed up as a dashboard, inline script, or a request that ignores the store or the warn state is rejected; only a proper ui-status request passes.', viewport={"width": 640, "height": 300})
+def _(t):
+    task = ev.load_task("glance-dashboard")
+    good = golden("glance-dashboard", ".request.md")
+    todo_page = ("<main id='outlet'><ui-todo-item text='Baby: sleeping' checked></ui-todo-item>"
+                 "<ui-todo-item text='Package: en route'></ui-todo-item></main>")
+    cases = [
+        ("to-do items dressed up as a dashboard", dict(html=todo_page, request=None), "request-incomplete"),
+        ("inline script that rewrites rows",      dict(html="<main id='outlet'><p id='baby'></p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
+        ("onclick refresh button",                dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
+        ("proposes an existing tag only",          dict(request=good.replace("`ui-status-change`", "a change event").replace("ui-status", "ui-progress")), "request-incomplete"),
+        ("ignores the store",                     dict(request=re.sub("store", "source", good, flags=re.I)), "request-incomplete"),
+        ("ignores the warn state",                dict(request=re.sub("warn", "amber", good, flags=re.I)), "request-incomplete"),
+    ]
+    wrong = []
+    for name, kw, code in cases:
+        t.step(f"Bad output: {name} -> expect [{code}]")
+        res = ev.check_output(t, task, **kw)
+        if res["passed"] or code not in {i["code"] for i in res["issues"]}:
+            wrong.append(f"{name}: {explain(res) or 'PASS'}")
+    check(not wrong, "; ".join(wrong))
+
 @test("agent-evals", "cli-and-aggregate-scoring", desc='check.py works as a command-line tool, and run_evals.py scores a folder of outputs and aggregates success rate and iterations.', needs_idiomorph=True, gif=False, viewport={"width": 640, "height": 300})
 def _(t):
     t.step("check.py works as a command")
@@ -115,7 +146,8 @@ def _(t):
     d = tempfile.mkdtemp()
     for tid in ("shopping-list", "todo-progress", "chat-left", "kanban"):
         open(os.path.join(d, tid + ".html"), "w").write(golden(tid))
-    open(os.path.join(d, "needs-new-behavior.request.md"), "w").write(golden("needs-new-behavior", ".request.md"))
+    for tid in ("needs-new-behavior", "glance-dashboard"):
+        open(os.path.join(d, tid + ".request.md"), "w").write(golden(tid, ".request.md"))
     for tid, it, tin, tout in (("shopping-list", 2, 12000, 3000), ("kanban", 1, 9000, 2500)):
         json.dump({"iterations": it, "tokens_in": tin, "tokens_out": tout}, open(os.path.join(d, tid + ".meta.json"), "w"))
     # break one output: it must show up as a failure and lower the success rate
@@ -124,7 +156,7 @@ def _(t):
     run = subprocess.run([sys.executable, os.path.join(EVALS, "run_evals.py"), "--outputs", d, "--out", res_file], capture_output=True, text=True)
     check(run.returncode == 1, "a failing task makes run_evals exit 1")
     r = json.load(open(res_file))["summary"]
-    eq((r["tasks"], r["passed"]), (5, 4))
-    eq(r["success_rate"], 0.8); eq(r["failures_by_code"], {"inline-script": 1})
+    eq((r["tasks"], r["passed"]), (6, 5))
+    eq(r["success_rate"], 0.833); eq(r["failures_by_code"], {"inline-script": 1})
     eq(r["mean_iterations_to_pass"], 1.5)
     eq(r["mean_tokens_per_passing_task"], 13250.0)
