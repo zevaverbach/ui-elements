@@ -24,7 +24,7 @@ from dataclasses import dataclass, field
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from failure_bundle import write_failure_bundle, snapshot, slug
-from video_to_gif import video_to_gif, GifTooLarge
+from video_to_gif import video_to_gif, GifTooLarge, LADDER
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CAPTION_JS = open(os.path.join(HERE, "caption.js")).read()
@@ -114,8 +114,8 @@ class Session:
         return out
 
 def run_test(browser, name, fn, base_dir, record_gif=False, base_url="", catalog_entry=None, init_scripts=(),
-             dwell=0.5, max_gif_bytes=1_500_000, known_issue=None, setup=None, **context_opts):
-    """Run fn(session). Returns a Result. Never raises for test failures."""
+             dwell=0.5, max_gif_bytes=1_500_000, known_issue=None, setup=None, gif_ladder=None, **context_opts):
+    """Run fn(session). Returns a Result. Never raises for test failures. `gif_ladder`: GIF settings (see video_to_gif)."""
     work = tempfile.mkdtemp(prefix="pwtest-")
     started = time.monotonic()
     s = Session(browser, name, work, base_url=base_url, init_scripts=init_scripts, dwell=dwell, **context_opts)
@@ -152,7 +152,7 @@ def run_test(browser, name, fn, base_dir, record_gif=False, base_url="", catalog
         dst = os.path.join(base_dir, "media", slug(name) + ".gif")
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         try:
-            res.gif_bytes = video_to_gif(video_path, dst, start=v_start, end=v_end, max_bytes=max_gif_bytes)
+            res.gif_bytes = video_to_gif(video_path, dst, start=v_start, end=v_end, max_bytes=max_gif_bytes, ladder=gif_ladder or LADDER)
             res.gif = dst
         except GifTooLarge as e:
             res.status, res.message = "failed", f"GIF over budget: {e}"

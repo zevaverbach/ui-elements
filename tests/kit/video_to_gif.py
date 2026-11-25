@@ -13,6 +13,9 @@ class GifTooLarge(RuntimeError):
 
 # (fps, max_width, colors): tried in order until the file fits.
 LADDER = [(8, 640, 64), (8, 560, 48), (6, 480, 32), (6, 400, 32), (5, 360, 24)]
+# For screens of static text (tables, verdicts): the video's compression noise makes antialiased text differ in every
+# frame; a small palette absorbs it, which makes such GIFs several times smaller at no loss in legibility.
+TEXT_LADDER = [(6, 640, 16), (5, 560, 16), (5, 480, 12)]
 
 def _run(args):
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", *args], check=True)

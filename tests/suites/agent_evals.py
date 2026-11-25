@@ -1,8 +1,9 @@
 """Suite F: agent composition evals. The golden solutions must pass the checker; every kind of bad output must be rejected
 with the right reason. No LLM is involved: this proves the checker works, so it can be trusted on real agent output."""
-import json, os, re, subprocess, sys, tempfile
+import html as htmllib, json, os, re, subprocess, sys, tempfile
 from registry import test, env
 from helpers import check, eq
+from video_to_gif import TEXT_LADDER
 
 EVALS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "agent-evals")
 sys.path.insert(0, EVALS)
@@ -19,6 +20,7 @@ GOLDEN_DESC = {
     "todo-progress": "The reference page for the release-checklist task (three to-dos with progress steps, no store) passes the checker and its browser assertions.",
     "chat-left": "The reference page for the support-chat task (a chat panel that opens from the left with a placeholder and a first message) passes the checker and its browser assertions.",
     "kanban": "The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions.",
+    "timer-60": "The reference page for the 60-second timer task (a ui-countdown with a \"Time's up!\" done slot, no script) passes the checker: it starts on click, counts down, and at zero fires ui-done and shows the done slot.",
 }
 
 def golden_test(task_id, **kw):
@@ -31,26 +33,60 @@ def golden_test(task_id, **kw):
         check(res["passed"], f"golden solution for {task_id} was rejected: {explain(res)}")
     return _
 
-for _id in ("shopping-list", "todo-progress", "chat-left", "kanban"):
+for _id in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
     golden_test(_id)
 
-@test("agent-evals", "golden-needs-new-behavior-is-a-request", desc='For a task no component can do (a countdown timer), the correct answer is a written request for a new component with no inline script, and the checker accepts it.', viewport={"width": 640, "height": 300})
-def _(t):
-    task = ev.load_task("needs-new-behavior")
-    t.step("Task: " + task["title"])
-    t.step("Correct output: a written request for a new component, no script")
-    res = ev.check_output(t, task, request=golden("needs-new-behavior", ".request.md"))
-    check(res["passed"], explain(res))
-    t.step("Verdict: PASS (the request names a new tag, attributes, events and why nothing existing fits)")
+# Request-kind checks load no page of their own, so the recording would be a blank screen with captions. They put the
+# evidence on screen instead: the answer being judged and the checker's verdict, one table row per check. Rows are added
+# in place (no reloads) and text is kept short: dense, changing text makes every video frame differ and blows the GIF budget.
+BOARD = """<!doctype html><meta charset="utf-8"><style>
+body{margin:0;padding:10px 14px 56px;background:#0f1117;color:#e6e6e6;font:13px/1.35 system-ui,sans-serif}
+h1{font-size:14px;margin:0 0 6px;color:#9aa4b2;font-weight:600}
+pre{margin:0 0 8px;padding:6px 10px;background:#171a22;border:1px solid #2a2f3a;border-radius:6px;white-space:pre-wrap;
+font:12px/1.35 ui-monospace,monospace;color:#c9d1d9}pre:empty{display:none}
+table{border-collapse:collapse;width:100%%}th,td{text-align:left;padding:3px 6px;border-bottom:1px solid #2a2f3a;vertical-align:top}
+td+td{white-space:nowrap}th{color:#9aa4b2;font-weight:600}code{display:block;font:11px ui-monospace,monospace;color:#8b949e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}.ok{color:#7ee2a0}.bad{color:#ff9d9d}</style>
+<h1>%s</h1><pre id="answer"></pre><table><thead><tr>%s</tr></thead><tbody id="rows"></tbody></table>"""
 
-@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it.', viewport={"width": 640, "height": 300})
+def board(t, title, *columns):
+    page = BOARD % (htmllib.escape(title), "".join(f"<th>{htmllib.escape(c)}</th>" for c in columns))
+    t.page.route("http://eval.test/board.html", lambda r: r.fulfill(status=200, body=page, content_type="text/html"))
+    t.page.goto("http://eval.test/board.html")
+
+def show(t, answer, chars=240):
+    """Show (the start of) the answer being judged."""
+    answer = re.sub(r"\n\s*\n", "\n", answer.strip()) if answer else "(nothing submitted)"
+    answer = answer if len(answer) <= chars else answer[:chars].rsplit(" ", 1)[0] + " ..."
+    t.page.evaluate("(s) => { document.getElementById('answer').textContent = s }", answer)
+
+def row(t, cells, ok, excerpt=None):
+    """Append a table row (optionally with an excerpt of the answer under the first cell); the last cell gets a check mark (ok) or a cross."""
+    t.page.evaluate("""([cells, ok, excerpt]) => {
+      const tr = document.createElement('tr');
+      cells.forEach((c, i) => { const td = tr.insertCell(); td.textContent = c; });
+      const last = tr.cells[cells.length - 1];
+      last.textContent = (ok ? '\u2713 ' : '\u2717 ') + last.textContent; last.className = ok ? 'ok' : 'bad';
+      if (excerpt) tr.cells[0].append(Object.assign(document.createElement('code'), {textContent: excerpt}));
+      document.getElementById('rows').append(tr);
+    }""", [cells, ok, excerpt])
+
+def codes(res):
+    return "PASS" if res["passed"] else ", ".join(sorted({i["code"] for i in res["issues"]}))
+
+@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 380})
 def _(t):
     task = ev.load_task("glance-dashboard")
-    t.step("Task: " + task["title"][:80])
-    t.step("Correct output: a written request for a status component, no script")
-    res = ev.check_output(t, task, request=golden("glance-dashboard", ".request.md"))
+    good = golden("glance-dashboard", ".request.md")
+    board(t, "Request task: " + task["title"], "Submitted", "Checker")
+    show(t, "Task prompt: " + task["prompt"], chars=200)
+    t.step("Task: a live status dashboard that no component can do")
+    outline = [l for l in good.splitlines() if l.startswith(("#", "**"))]   # headings: what the checker looks for
+    show(t, "request.md, outline:\n" + "\n".join(l[:60] for l in outline), chars=400)
+    t.step("Correct output: a written request for a new component, no script")
+    res = ev.check_output(t, task, request=good)
+    row(t, ["request.md (no page, no script)", codes(res)], res["passed"])
+    t.step("Verdict: PASS (the request names a new tag, attributes, events and why nothing existing fits)")
     check(res["passed"], explain(res))
-    t.step("Verdict: PASS (the request proposes ui-status with store binding and says why nothing existing fits)")
 
 # (name, task, mutate(html) -> html, expected issue code)
 SHOP = "shopping-list"
@@ -95,24 +131,34 @@ def _(t):
     t.step("Result: " + ("every bad output was rejected for the right reason" if not wrong else f"{len(wrong)} wrong verdicts"))
     check(not wrong, "checker verdicts were wrong:\n  " + "\n  ".join(wrong))
 
-@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes.', viewport={"width": 640, "height": 300})
+@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 370})
 def _(t):
-    task = ev.load_task("needs-new-behavior")
-    good = golden("needs-new-behavior", ".request.md")
+    task = ev.load_task("glance-dashboard")
+    good = golden("glance-dashboard", ".request.md")
+    unaware = re.sub("store", "source", re.sub("status", "widget", good, flags=re.I), flags=re.I)
     cases = [
-        ("inline script instead of a request", dict(html="<main id='outlet'><button id='b'>Start timer</button><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
-        ("onclick instead of a request",       dict(html="<main id='outlet'><button onclick=\"start()\">Start timer</button></main>", request=good), "inline-handler"),
+        ("inline script instead of a request", dict(html="<main id='outlet'><p id='server'>Server</p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
+        ("onclick instead of a request",       dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
         ("no request at all",                  dict(html=None, request=None), "request-incomplete"),
-        ("a request that proposes nothing new", dict(request="I added a timer using ui-todo-item and ui-each. It works. " * 8), "request-incomplete"),
-        ("too short",                          dict(request="Please add ui-countdown."), "request-incomplete"),
-        ("ignores the capability",             dict(request=good.replace("countdown", "widget").replace("seconds", "units")), "request-incomplete"),
+        ("a request that proposes nothing new", dict(request="I built the dashboard with ui-todo-item and ui-each over a store. It works. " * 8), "request-incomplete"),
+        ("too short",                          dict(request="Please add ui-status."), "request-incomplete"),
+        ("ignores the capability",             dict(request=unaware), "request-incomplete"),
     ]
+    board(t, "Bad answers to the impossible task (" + task["id"] + ")", "Bad output", "Expected", "Checker said")
+    t.dwell = min(t.dwell, 0.3)                      # seven screens of text: keep the GIF inside the media budget
     wrong = []
     for name, kw, code in cases:
-        t.step(f"Bad output: {name} -> expect [{code}]")
         res = ev.check_output(t, task, **kw)
-        if res["passed"] or code not in {i["code"] for i in res["issues"]}:
+        right = not res["passed"] and code in {i["code"] for i in res["issues"]}
+        answer = kw.get("html") or kw.get("request") or "(nothing submitted)"
+        row(t, [name, code, codes(res)], right, re.sub(r"\s+", " ", answer)[:60])
+        t.step(f"Bad output: {name} -> expect [{code}]")
+        if not right:
             wrong.append(f"{name}: {explain(res) or 'PASS'}")
+    res = ev.check_output(t, task, request=good)
+    row(t, ["control: the proper request", "PASS", codes(res)], res["passed"], re.sub(r"\s+", " ", good)[:60])
+    t.step("Control: the proper request still passes")
+    check(res["passed"], "the golden request must pass: " + explain(res))
     check(not wrong, "; ".join(wrong))
 
 @test("agent-evals", "checker-rejects-cheating-on-the-dashboard", desc='Answering the dashboard task with a to-do list dressed up as a dashboard, inline script, or a request that ignores the store or the warn state is rejected; only a proper ui-status request passes.', viewport={"width": 640, "height": 300})
@@ -144,10 +190,9 @@ def _(t):
     check(out.returncode == 0 and out.stdout.startswith("PASS kanban"), out.stdout + out.stderr)
     t.step("run_evals.py scores a folder of outputs and aggregates the metrics")
     d = tempfile.mkdtemp()
-    for tid in ("shopping-list", "todo-progress", "chat-left", "kanban"):
+    for tid in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
         open(os.path.join(d, tid + ".html"), "w").write(golden(tid))
-    for tid in ("needs-new-behavior", "glance-dashboard"):
-        open(os.path.join(d, tid + ".request.md"), "w").write(golden(tid, ".request.md"))
+    open(os.path.join(d, "glance-dashboard.request.md"), "w").write(golden("glance-dashboard", ".request.md"))
     for tid, it, tin, tout in (("shopping-list", 2, 12000, 3000), ("kanban", 1, 9000, 2500)):
         json.dump({"iterations": it, "tokens_in": tin, "tokens_out": tout}, open(os.path.join(d, tid + ".meta.json"), "w"))
     # break one output: it must show up as a failure and lower the success rate
