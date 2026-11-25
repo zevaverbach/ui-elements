@@ -4,7 +4,7 @@ Source material found on this machine (read-only references; nothing was modifie
 
 | UI | Location | Kind |
 |---|---|---|
-| Beelink Chat | `home-server-migration/media-server/chat-server.py` (HTML/CSS/JS embedded in the `PAGE` string) | chat |
+| Beelink Chat | `media-server/chat-server.py` in what is now `zev/beelink` (HTML/CSS/JS embedded in the `PAGE` string); removed 2026-11-20, see that repo's history | chat |
 | Day Stack | `daystack/day-stack.html` | task list ("blocks" with progress) |
 | STT bench / live dictation | `stt/index.html`, `stt/client/live-dictation.js` | speech-to-text (server-side Deepgram, not Web Speech) |
 
