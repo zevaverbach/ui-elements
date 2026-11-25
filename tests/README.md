@@ -39,7 +39,7 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 
 ## Recordings
 
-Every recording is made in **dark mode** (the browser context uses `color_scheme="dark"`; the visual test checks light mode in a separate, unrecorded context). Each recording is the test's own run: the caption at the bottom is the current step, the red dot is the pointer, the badge in the corner is the key being pressed. Only **passing** runs are kept.
+Every recording is made in **dark mode** (the browser context uses `color_scheme="dark"`; the visual test checks light mode in a separate, unrecorded context). Each recording is the test's own run: the caption at the bottom is the current step, the red dot is the pointer, the badge in the corner is the key being pressed. Only **passing** runs are kept. A recording must show the evidence, not just captions: tests with no page of their own (the request-kind agent evals, for example) put the answer being judged and the checker's verdict on screen.
 
 #### agent-evals
 
