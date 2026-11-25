@@ -105,6 +105,19 @@
     <ui-progress variant="bar" heading="Spend today" value="62" max="100" goal="80" label="$62 of $80"></ui-progress>
     <ui-progress heading="Lifts" value="12" max="12" label="12 of 12 sets"><span slot="done">Done! 💪</span></ui-progress>
   </div>
+  <p class="note">Bound to a store: the ring counts ticked sets in the list beside it (<code>store="sets" where='{"done":true}'</code>), with no script. Tick the last one to see the done slot; untick to re-arm it.</p>
+  <ui-store name="sets"><script type="application/json">{"items":[
+    {"id":"s1","text":"Squat 5×5","done":true},
+    {"id":"s2","text":"Bench 5×5","done":false},
+    {"id":"s3","text":"Row 5×5","done":false}
+  ]}</script></ui-store>
+  <div class="bar" id="bound-progress">
+    <ui-progress id="sets-ring" heading="Today's sets" store="sets" where='{"done":true}' label="{value} of {max} sets"><span slot="done">All sets done! 💪</span></ui-progress>
+    <div style="flex:1;min-width:16rem;display:grid;gap:6px;align-content:start">
+      <ui-each id="sets-list" store="sets" tag="ui-todo-item" map='{"text":"text","checked":"done"}'
+        events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-reorder":{"action":"move"}}'></ui-each>
+    </div>
+  </div>
 
   <h2>Event log</h2>
   <pre id="log" aria-live="off">(events appear here)</pre>
@@ -196,6 +209,11 @@
       ${EVENTS}></ui-each>
   </section>
 </div>`,
+    'Progress ring following the list': `<h3>Progress</h3>
+<ui-progress id="ring" heading="Done so far" store="demo" where='{"done":true}' label="{value} of {max} done"><span slot="done">All done!</span></ui-progress>
+<ui-each id="rows" store="demo" tag="ui-todo-item"
+  ${MAP}
+  ${EVENTS}></ui-each>`,
     'Standalone items (no store)': `<h3>Plain components</h3>
 <ui-todo-item id="s1" text="A plain item"></ui-todo-item>
 <ui-todo-item id="s2" text="With progress and a label" label="Medium" progress="50"></ui-todo-item>

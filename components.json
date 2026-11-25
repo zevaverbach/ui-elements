@@ -405,7 +405,8 @@
       "parts": [],
       "composes-well-with": [
         "ui-each",
-        "ui-chat-panel"
+        "ui-chat-panel",
+        "ui-progress"
       ],
       "composed-in": [],
       "notes": "Declare stores in the stable shell, outside the swapped outlet. Safe inside the outlet too: data is not deleted when the element is removed. Seed is used only when no store of that name exists. Values must be JSON-serializable."
@@ -486,7 +487,8 @@
       "parts": [],
       "composes-well-with": [
         "ui-todo-item",
-        "ui-store"
+        "ui-store",
+        "ui-progress"
       ],
       "composed-in": [],
       "notes": "The child tag is supplied by `tag`, so any component whose attributes and events fit map/events works. ui-each must have a ui-store with the same name somewhere in the page (stores are routed by name)."
@@ -592,7 +594,7 @@
         {
           "name": "max",
           "type": "number",
-          "description": "Amount that means done. Default 100."
+          "description": "Amount that means done. Default 100; when bound to a store, the item count at path unless set explicitly."
         },
         {
           "name": "variant",
@@ -607,12 +609,27 @@
         {
           "name": "label",
           "type": "string",
-          "description": "Text shown with the graphic. Default the percentage."
+          "description": "Text shown with the graphic. Default the percentage. Placeholders {value}, {max} and {percent} are filled in, e.g. \"{value} of {max} sets\"."
         },
         {
           "name": "heading",
           "type": "string",
           "description": "Title of the goal; also the progress bar's accessible name (else the label)."
+        },
+        {
+          "name": "store",
+          "type": "string",
+          "description": "Name of a <ui-store>. When set, value is the number of matching items at path and max the number of items there (unless max is set); both stay live. The value attribute is then ignored."
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "description": "Dot path to the items array in the store. Default \"items\"."
+        },
+        {
+          "name": "where",
+          "type": "JSON {field: value}",
+          "description": "Equality filter, as on ui-each: value counts only matching items, e.g. {\"done\":true}."
         }
       ],
       "properties": [
@@ -641,7 +658,7 @@
         {
           "name": "ui-complete",
           "detail": "{value: number, max: number}",
-          "description": "Value reached max (once per crossing)."
+          "description": "Value reached max (once per crossing; re-arms when it drops below). An empty bound list is never complete."
         }
       ],
       "cssCustomProperties": [
@@ -660,10 +677,11 @@
       "composes-well-with": [
         "ui-countdown",
         "ui-todo-item",
-        "ui-store"
+        "ui-store",
+        "ui-each"
       ],
       "composed-in": [],
-      "notes": "Doubles as the goal card: heading + image + meta + done slots."
+      "notes": "Doubles as the goal card: heading + image + meta + done slots. Bind it to the same store as a ui-each list (store + where) to make the ring follow checked items without script."
     }
   ],
   "compositions": [

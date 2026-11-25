@@ -5,15 +5,26 @@
 //   <script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/ui-progress.js"></script>
 //   <ui-progress heading="Ship the feature" value="3" max="5" label="3 of 5 tasks"></ui-progress>
 //   <ui-progress variant="bar" value="62" goal="80" label="$62 of $80"><span slot="done">Under budget!</span></ui-progress>
+//   <ui-progress store="todos" where='{"done":true}' label="{value} of {max} done"></ui-progress>
 //
 // Attributes / properties (all reflect):
 //   value     number   current amount (default 0)                      (prop: value)
 //   max       number   amount that means "done" (default 100)           (prop: max)
 //   variant   "ring" | "bar"   shape (default ring)
 //   goal      number   draws a goal line at this amount on the same scale as value/max
-//   label     string   text shown with the graphic, e.g. "3 of 5 tasks" (default: the percentage)
+//   label     string   text shown with the graphic, e.g. "3 of 5 tasks" (default: the percentage).
+//                      Placeholders {value}, {max} and {percent} (rounded) are filled in: "{value} of {max} sets"
 //   heading   string   title of the goal, shown above the graphic
 //   (prop) percent   read-only: value / max as 0-100
+//
+// Store binding (optional; same conventions as ui-each). Without `store` it works exactly as above.
+//   store     string   name of a <ui-store> (it may be declared later). When set, value and max come from
+//                      the store and stay live; the value attribute is ignored and increment() does nothing
+//   path      string, default "items"   dot path to the items array in the store
+//   where     JSON {field: value}   equality filter (dot paths ok), as on ui-each: value = number of matching items
+//   max       when bound: the number of items at path, unless the max attribute is set explicitly.
+//             An empty list (max 0) is never complete.
+//   ui-complete and the done slot behave as without a store; if the count drops below max, completion re-arms.
 //
 // Slots:
 //   meta     under the graphic: deadline, time left, notes
@@ -33,7 +44,8 @@
 //   --ui-progress-bg, --ui-progress-track, --ui-progress-accent, --ui-progress-done, --ui-progress-goal
 // Parts: heading, graphic, label
 
-import { emit, define } from './_shared/util.js';
+import { emit, define, json, matches } from './_shared/util.js';
+import { get, subscribe } from './_shared/store-registry.js';
 import { sheet } from './_shared/base.js';
 
 const styles = sheet(`
@@ -72,9 +84,10 @@ const styles = sheet(`
 const NS = 'http://www.w3.org/2000/svg';
 const R = 45;
 const C = 2 * Math.PI * R;
+const pct = (value, max) => (max > 0 ? Math.min(100, Math.max(0, (value / max) * 100)) : 0);
 
 class UiProgress extends HTMLElement {
-  static observedAttributes = ['value', 'max', 'variant', 'goal', 'label', 'heading'];
+  static observedAttributes = ['value', 'max', 'variant', 'goal', 'label', 'heading', 'store', 'path', 'where'];
 
   constructor() {
     super();
@@ -115,31 +128,63 @@ class UiProgress extends HTMLElement {
     this._live = q('[aria-live]');
   }
 
-  connectedCallback() { this._render(); }
+  connectedCallback() {
+    this._subscribe();
+    this._render();
+  }
 
-  attributeChangedCallback() { this._render(); }
+  disconnectedCallback() { this._unsub?.(); this._unsub = null; }
 
-  get value() { return Number(this.getAttribute('value')) || 0; }
+  // Before connection there is nothing to render for (and a ui-complete would reach no listener).
+  attributeChangedCallback(name) {
+    if (!this.isConnected) return;
+    if (name === 'store') this._subscribe();
+    this._render();
+  }
+
+  _subscribe() {
+    this._unsub?.();
+    const store = this.getAttribute('store');
+    this._unsub = store ? subscribe(store, () => this._render()) : null;
+  }
+
+  // {value, max} from the attributes, or from the store when bound.
+  _amounts() {
+    const store = this.getAttribute('store');
+    const maxAttr = this.getAttribute('max');
+    const explicitMax = Number(maxAttr) || 100;
+    if (!store) return { value: Number(this.getAttribute('value')) || 0, max: explicitMax };
+    const arr = get(store, this.getAttribute('path') || 'items');
+    const items = Array.isArray(arr) ? arr : [];
+    const where = json(this, 'where');
+    const value = items.filter((it) => it != null && typeof it === 'object' && matches(it, where)).length;
+    return { value, max: maxAttr === null ? items.length : explicitMax };
+  }
+
+  get value() { return this._amounts().value; }
   set value(v) { this.setAttribute('value', String(v)); }
-  get max() { return Number(this.getAttribute('max')) || 100; }
+  get max() { return this._amounts().max; }
   set max(v) { this.setAttribute('max', String(v)); }
-  get percent() { return Math.min(100, Math.max(0, (this.value / this.max) * 100)); }
+  get percent() { const { value, max } = this._amounts(); return pct(value, max); }
 
-  increment(by = 1) { this.value = Math.min(this.max, this.value + by); }
+  increment(by = 1) { if (!this.hasAttribute('store')) this.value = Math.min(this.max, this.value + by); }
 
   _render() {
+    const { value, max } = this._amounts();
     const ring = this.getAttribute('variant') !== 'bar';
-    const pct = this.percent;
-    const done = this.value >= this.max;
+    const percent = pct(value, max);
+    const done = max > 0 && value >= max;
     const hasDone = this.querySelector('[slot="done"]') !== null;
-    const label = this.getAttribute('label') || `${Math.round(pct)}%`;
+    const fill = { value, max, percent: Math.round(percent) };
+    const tpl = this.getAttribute('label');
+    const label = tpl ? tpl.replace(/\{(value|max|percent)\}/g, (_, k) => String(fill[k])) : `${fill.percent}%`;
     const goalAttr = this.getAttribute('goal');
-    const goalPct = goalAttr === null ? null : Math.min(100, Math.max(0, (Number(goalAttr) / this.max) * 100));
+    const goalPct = goalAttr === null ? null : pct(Number(goalAttr), max);
 
     this._card.toggleAttribute('data-done', done);
     this._head.textContent = this.getAttribute('heading') || '';
-    this._graphic.setAttribute('aria-valuemax', String(this.max));
-    this._graphic.setAttribute('aria-valuenow', String(Math.min(this.value, this.max)));
+    this._graphic.setAttribute('aria-valuemax', String(max));
+    this._graphic.setAttribute('aria-valuenow', String(Math.min(value, max)));
     this._graphic.setAttribute('aria-valuetext', label);
     this._graphic.setAttribute('aria-label', this.getAttribute('heading') || label);
 
@@ -157,8 +202,8 @@ class UiProgress extends HTMLElement {
     if (showDone && !ring) this._barLabel.append(this._doneSlot);
     else if (this._doneSlot.parentNode !== this._center) this._center.append(this._doneSlot);
 
-    this._ringFill.style.strokeDashoffset = String(C * (1 - pct / 100));
-    this._barFill.style.width = `${pct}%`;
+    this._ringFill.style.strokeDashoffset = String(C * (1 - percent / 100));
+    this._barFill.style.width = `${percent}%`;
 
     this._ringGoal.toggleAttribute('hidden', goalPct === null);
     if (goalPct !== null) {
@@ -171,7 +216,7 @@ class UiProgress extends HTMLElement {
 
     if (done && !this._wasDone) {
       this._live.textContent = 'Complete';
-      emit(this, 'ui-complete', { value: this.value, max: this.max });
+      emit(this, 'ui-complete', { value, max });
     }
     if (!done) this._live.textContent = '';
     this._wasDone = done;

@@ -36,18 +36,9 @@
 //
 // CSS custom properties: none.
 
-import { emit, define, uid } from './_shared/util.js';
+import { emit, define, uid, json, field, matches } from './_shared/util.js';
 import { get, subscribe, dispatch } from './_shared/store-registry.js';
 
-const json = (el, attr) => {
-  const raw = el.getAttribute(attr);
-  if (!raw) return {};
-  try { const v = JSON.parse(raw); return v && typeof v === 'object' ? v : {}; } catch (err) {
-    console.warn(`[ui-each] invalid JSON in "${attr}"`, err);
-    return {};
-  }
-};
-const field = (item, path) => String(path).split('.').reduce((o, k) => (o == null ? undefined : o[k]), item);
 const resolve = (v, detail) => {
   if (typeof v === 'string' && v.startsWith('$detail.')) return field(detail, v.slice(8));
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, resolve(x, detail)]));
@@ -101,8 +92,7 @@ export class UiEach extends HTMLElement {
   }
   _visible(items) {
     const where = json(this, 'where');
-    const entries = Object.entries(where);
-    return entries.length ? items.filter((it) => entries.every(([k, v]) => field(it, k) === v)) : items;
+    return Object.keys(where).length ? items.filter((it) => matches(it, where)) : items;
   }
   get _keyField() { return this.getAttribute('key') || 'id'; }
 
