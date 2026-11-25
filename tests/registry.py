@@ -56,7 +56,7 @@ def mount(t, html):
 
 def open_fixture(t, html=""):
     t.goto(FIXTURE)
-    t.page.wait_for_function("customElements.get('ui-todo-item') && customElements.get('ui-chat-panel') && customElements.get('ui-store') && customElements.get('ui-each') && window.__lib")
+    t.page.wait_for_function("customElements.get('ui-todo-item') && customElements.get('ui-chat-panel') && customElements.get('ui-store') && customElements.get('ui-each') && customElements.get('ui-countdown') && customElements.get('ui-progress') && window.__lib")
     if html:
         mount(t, html)
 

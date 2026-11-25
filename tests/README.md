@@ -30,12 +30,12 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 | Suite | Checks | Why |
 |---|---|---|
 | **A. catalog** (`catalog-integrity`) | `components.json` parses; every component file has an entry, a header and a demo; every attribute, event, slot, method, property, part, CSS custom property and store action in the **source** matches the catalog and the file header, in both directions, with a diff when they disagree | agents trust the catalog instead of reading source; drift makes them write wrong HTML |
-| **B. `todo-item`, `chat-panel`** | attributes and properties, event names and `detail` shapes (and that they bubble and are composed), keyboard behavior, roles/labels/focus order. todo-item: toggle, progress steps, inline edit, confirm-delete including a vetoed cancelable `ui-delete`, mouse drag, keyboard and **touch** reorder, speech-to-text with a **mocked SpeechRecognition** (and the mic hidden when the API is missing). chat-panel: open/close, focus return, backdrop, all three sides, `ui-send` (cancelable, Shift+Enter), `addMessage`/`messages`, busy, `prefers-reduced-motion`, store binding | the contract of each element, in a real browser |
+| **B. `todo-item`, `chat-panel`, `countdown`, `progress`** | attributes and properties, event names and `detail` shapes (and that they bubble and are composed), keyboard behavior, roles/labels/focus order. todo-item: toggle, progress steps, inline edit, confirm-delete including a vetoed cancelable `ui-delete`, mouse drag, keyboard and **touch** reorder, speech-to-text with a **mocked SpeechRecognition** (and the mic hidden when the API is missing). chat-panel: open/close, focus return, backdrop, all three sides, `ui-send` (cancelable, Shift+Enter), `addMessage`/`messages`, busy, `prefers-reduced-motion`, store binding. countdown (1-3 s phases): ticks, pause holds the time, phases in order (`ui-tick`, `ui-phase`, `ui-done`), done slot and Restart, warn state, autostart, `reset()`. progress: ring and bar, `percent`, goal line position, `increment()` firing `ui-complete` once per crossing, done slot, `aria-value*` | the contract of each element, in a real browser |
 | **C. `state`** | on `demo/shell.html`: swapping the outlet keeps the to-do items, **focus and caret** in an input with a stable id, typed text, scroll position and an open inline edit; removing and re-adding `<ui-store>` keeps data; `persist="local"` survives reload (and a schema version bump re-seeds); a `ui-action` from inside the outlet reaches a store in the shell; filtered views; chat history | the point of the stable shell |
 | **D. `sanitizer`** | 51 table-driven cases (script/iframe/object/embed, `on*` in every spelling, `javascript:` URLs with case/whitespace/entity tricks, nested and malformed markup, mXSS patterns) run through `sanitizeHtml`, then **inserted into a live page** to prove nothing executes; `ui-*` and layout tags survive; output is idempotent | swapped HTML is untrusted |
 | **E. `consume`** | a blank page on one origin imports components from a second origin that mimics the jsDelivr layout (`/gh/<user>/<repo>@<ref>/<path>`, CORS): relative `./_shared/*.js` imports work, every catalog module loads, `swapOutlet` finds `components.json` relative to itself; plus one online check against real jsDelivr (skips when offline or the tag does not exist) | proves the no-build, CDN-only promise |
 | **F. `agent-evals`** | tasks, golden solutions and a checker (tags, attributes, script rules, wiring, console errors, task assertions). The goldens must pass; 23 kinds of bad output must be rejected with the right code, including inline script on the one task no component can do, where the right answer is a written request for a new component | lets you measure agents without an LLM in the repo; see [agent-evals/README.md](agent-evals/README.md) |
-| **G. `visual`, `demo-pages`** | light/dark screenshots of every demo page (only the dark pass is recorded) (background luminance, no horizontal overflow, non-blank, light != dark), an axe-core pass (online), and the framework-free assertion pages `demo/sanitizer-test.html` and `demo/store-test.html` | catches theming and accessibility regressions |
+| **G. `visual`, `demo-pages`** | light/dark screenshots of every demo page (only the dark pass is recorded) (background luminance, no horizontal overflow, non-blank, light != dark), light/dark screenshots of the ui-countdown and ui-progress demo sections with the ring goal tick and bar goal line sampled from the pixels, an axe-core pass (online), and the framework-free assertion pages `demo/sanitizer-test.html` and `demo/store-test.html` | catches theming and accessibility regressions |
 
 ## Recordings
 
@@ -89,6 +89,23 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 
 </details>
 
+#### countdown
+
+<details><summary>8 tests</summary>
+
+| Test | What it checks | Recording |
+|---|---|---|
+| `ticks` | Start counts down once per second: the time text, `remaining` and a ui-tick per whole second (bubbling, composed), the bar fills, and the button reads Start, then Pause. | (no GIF) |
+| `pause-holds-time` | Pause stops the clock: the time and `remaining` hold, no ticks arrive while paused, the button reads Resume, and resuming continues from where it stopped. | (no GIF) |
+| `phases-in-order` | Phases run in order: ui-tick for each second of each phase, ui-phase when the second phase begins (not for the first), then a single ui-done; the phase line and the live region follow along. | ![countdown-phases-in-order](media/countdown-phases-in-order.gif) |
+| `done-slot-and-restart` | At zero the done slot replaces the time (without a done slot the time shows 0:00), the button reads Restart, and Restart runs the countdown again from the first phase. | (no GIF) |
+| `warn-state` | The warning state starts when the last phase reaches `warn` seconds left (default 10), only once started, and pulses only while running; `--ui-countdown-warn` colors it. | (no GIF) |
+| `warn-only-in-last-phase` | With phases, an early phase that is under `warn` seconds does not warn; only the last phase does. | (no GIF) |
+| `autostart` | `autostart` starts counting as soon as the element is connected, with no click; without it nothing runs. | (no GIF) |
+| `reset` | reset() stops the clock and returns to the first phase at full time with the original button label, from running, paused or done; `seconds` changes apply after a reset. | (no GIF) |
+
+</details>
+
 #### demo-pages
 
 <details><summary>5 tests</summary>
@@ -100,6 +117,21 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `reset-data-restores-the-seed` | Regression test: "Reset data" on the live editor puts back exactly the four seed to-dos (it used to drop one), whether or not anything was changed. | ![demo-pages-reset-data-restores-the-seed](media/demo-pages-reset-data-restores-the-seed.gif) |
 | `injection-example-shows-what-was-removed` | The "Try to inject script" example lists exactly what the sanitizer removed (script, onclick, onerror, javascript: URL), the preview really is clean, and the ui-* component survives. | ![demo-pages-injection-example-shows-what-was-removed](media/demo-pages-injection-example-shows-what-was-removed.gif) |
 | `layouts-use-the-width-on-tablets` | On iPad-sized screens the demo pages fill the width (no narrow centered column), the two-column to-do layout is used only when wide enough to read, and stacks on iPad portrait. | ![demo-pages-layouts-use-the-width-on-tablets](media/demo-pages-layouts-use-the-width-on-tablets.gif) |
+
+</details>
+
+#### progress
+
+<details><summary>6 tests</summary>
+
+| Test | What it checks | Recording |
+|---|---|---|
+| `ring-and-bar` | The default variant is a ring whose fill follows value/max; variant="bar" swaps in a bar of the same percentage, with the label below; heading and meta slot render. | (no GIF) |
+| `percent` | `percent` is value/max as 0-100, clamped at both ends; with no label the percentage is the label; value and max reflect as attributes. | (no GIF) |
+| `goal-line-position` | The goal line sits at goal/max: on the bar its centre is at that fraction of the width, on the ring the tick is centred that far round from 12 o'clock; no `goal` hides both, and goal is clamped to the track. | ![progress-goal-line-position](media/progress-goal-line-position.gif) |
+| `complete-fires-once-per-crossing` | increment() adds 1 (or `by`) capped at max; ui-complete {value, max} fires once when value reaches max, not again while it stays there, and again after dropping below and crossing back. | (no GIF) |
+| `done-slot` | Once value >= max the done slot replaces the label (ring and bar, also after switching variant) and the fill switches to the done color; below max the label is back. | (no GIF) |
+| `aria-values` | The graphic is role="progressbar" with aria-valuemin 0, aria-valuemax = max, aria-valuenow = value capped at max, aria-valuetext = the label (or the percentage), and an accessible name from the heading or label. | (no GIF) |
 
 </details>
 
@@ -135,7 +167,7 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 
 #### todo-item
 
-<details><summary>13 tests</summary>
+<details><summary>18 tests</summary>
 
 | Test | What it checks | Recording |
 |---|---|---|
@@ -152,23 +184,29 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `speech-unsupported` | Without the Web Speech API the mic button is hidden and the rest of the item still works. | ![todo-item-speech-unsupported](media/todo-item-speech-unsupported.gif) |
 | `speech-opt-out` | The `no-speech` attribute hides the mic even when the API exists. | ![todo-item-speech-opt-out](media/todo-item-speech-opt-out.gif) |
 | `accessibility` | Every control has an accessible name, and the Tab order is grip, checkbox, steps, mic, edit, delete. | ![todo-item-accessibility](media/todo-item-accessibility.gif) |
+| `speech-auto-prefers-native` | In `auto` mode the browser's Web Speech API is used even when a transcriber is registered. | ![todo-item-speech-auto-prefers-native](media/todo-item-speech-auto-prefers-native.gif) |
+| `speech-backend-fallback` | Without Web Speech, a registered transcriber is used: record, stop, transcribe; the result arrives as a final ui-transcript with source backend, and the live region announces Recording then Transcribing. | ![todo-item-speech-backend-fallback](media/todo-item-speech-backend-fallback.gif) |
+| `speech-forced-backend` | `speech="backend"` uses the transcriber even when Web Speech exists; `speech="native"` keeps using Web Speech. | ![todo-item-speech-forced-backend](media/todo-item-speech-forced-backend.gif) |
+| `speech-mic-hidden-standalone` | With neither Web Speech nor a transcriber the mic is hidden and the item works standalone. | ![todo-item-speech-mic-hidden-standalone](media/todo-item-speech-mic-hidden-standalone.gif) |
+| `speech-backend-errors` | getUserMedia denial and a rejecting transcriber surface as ui-speech-error (not-allowed, transcribe-failed) and are announced. | ![todo-item-speech-backend-errors](media/todo-item-speech-backend-errors.gif) |
 
 </details>
 
 #### visual
 
-<details><summary>2 tests</summary>
+<details><summary>3 tests</summary>
 
 | Test | What it checks | Recording |
 |---|---|---|
 | `demo-pages-light-and-dark` | Every demo page renders in both color schemes with no horizontal overflow, no blank screenshot, and a clearly light and a clearly dark background (the recording shows the dark pass). | ![visual-demo-pages-light-and-dark](media/visual-demo-pages-light-and-dark.gif) |
 | `axe-accessibility` (online) | Online check: axe-core finds no serious or critical accessibility violations on the demo pages. | ![visual-axe-accessibility](media/visual-axe-accessibility.gif) |
+| `countdown-and-progress-light-and-dark` | The ui-countdown and ui-progress demo sections in both color schemes: the ring goal tick and the bar goal line are drawn at the goal in the goal color (sampled from the screenshot), the bar card shows no ring, and nothing is blank. | (no GIF) |
 
 </details>
 
 Regenerate: `python3 tests/run.py --gifs` (about 5 minutes), then `python3 tests/run.py --table` and paste. The "What it checks" text comes from the `desc=` argument of each `@test(...)`; give every new test one. A failing test never overwrites its committed GIF. GIFs are produced with ffmpeg's two-pass `palettegen`/`paletteuse`, about 8 fps (the ladder steps down from there), at most 640 px wide, from the first caption to just after the last (idle time trimmed, 18 s cap).
 
-**Media budget:** each GIF under 1.5 MB and `tests/media/` under 15 MB in total. `kit/video_to_gif.py` steps down fps, width and palette size until a GIF fits and refuses to write one that does not; `run.py` fails the run if the folder goes over 15 MB. Currently: 14.6 MB in 52 GIFs, largest 1232 KB. Headroom is thin (about 0.4 MB): trim or shorten a recording before adding many more.
+**Media budget:** each GIF under 1.5 MB and `tests/media/` under 15 MB in total. `kit/video_to_gif.py` steps down fps, width and palette size until a GIF fits and refuses to write one that does not; `run.py` fails the run if the folder goes over 15 MB. Currently: 14.9 MB in 54 GIFs, largest 1232 KB. Headroom is about 0.06 MB, so the `countdown` and `progress` suites record only one test each (`gif=False` on the rest): trim or shorten older recordings before adding more.
 
 ## Failure bundles
 
