@@ -63,9 +63,12 @@ with sync_playwright() as p:
 | `run_test(..., catalog_entry=...)` | any JSON you want copied into `report.json` (e.g. the docs for the component under test) |
 | `run_test(..., known_issue="why")` | a failure is reported as a known issue instead of failing the run |
 | `run_test(..., setup=fn)` | `fn(session)` runs before the test (add routes, cookies, ...) |
+| `run_test(..., gif_ladder=TEXT_LADDER)` | GIF settings from `video_to_gif`; `TEXT_LADDER` (16 colors, 6 fps) suits screens of static text such as tables and verdicts |
 | `raise Skip("why")` / `raise Pending("why")` | skipped / not built yet |
 | any context option | `viewport`, `has_touch`, `reduced_motion`, `color_scheme`, `locale`, ... |
 
 ## Budget
 
 `video_to_gif` defaults to 1.5 MB per GIF. Keep the viewport small (e.g. 640×420), trim idle time (the harness starts the GIF at the first `t.step` and ends shortly after the last), and keep tests short.
+
+A recording must show what the test checks. A test that loads no page of its own (it checks text, a file or a function) would record a blank screen with captions: render its input and the verdict on a page instead, adding to it in place rather than reloading, and record it with `gif_ladder=TEXT_LADDER`. Video compression noise makes antialiased text differ in every frame; the small palette absorbs it and keeps such GIFs several times smaller.

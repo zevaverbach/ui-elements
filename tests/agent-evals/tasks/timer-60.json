@@ -1,0 +1,46 @@
+{
+ "id": "timer-60",
+ "title": "A 60-second timer that reacts at zero (no script)",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Add a \"Start timer\" button to the page that counts down from 60 seconds and shows the remaining time, then shows the message \"Time's up!\" when it reaches zero. Use the library's components; do NOT write inline script or onclick handlers. Put the content inside <main id=\"outlet\">.",
+ "assert": [
+  {
+   "step": "One countdown, set to 60 seconds and not yet running",
+   "eval": "(() => { const c = document.querySelectorAll('#outlet ui-countdown'); return c.length === 1 && c[0].remaining === 60 && !c[0].running; })()"
+  },
+  {
+   "step": "Its button reads \"Start timer\"",
+   "eval": "document.querySelector('#outlet ui-countdown').shadowRoot.querySelector('button').textContent.trim()",
+   "equals": "Start timer"
+  },
+  {
+   "step": "A \"Time's up!\" reaction is slotted and hidden for now",
+   "eval": "(() => { const c = document.querySelector('#outlet ui-countdown'); const d = c.querySelector('[slot=\"done\"]'); return !!d && /time.s up/i.test(d.textContent) && c.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  },
+  {
+   "step": "Click Start timer: it runs",
+   "eval": "(() => { window.__done = 0; document.addEventListener('ui-done', () => window.__done++); const c = document.querySelector('#outlet ui-countdown'); c.shadowRoot.querySelector('button').click(); return c.running; })()"
+  },
+  {
+   "step": "Wait a moment",
+   "wait": 1300
+  },
+  {
+   "step": "The remaining time has dropped",
+   "eval": "document.querySelector('#outlet ui-countdown').remaining < 60"
+  },
+  {
+   "step": "Shorten it to 1 second and start again (the test does not wait a minute)",
+   "eval": "(() => { const c = document.querySelector('#outlet ui-countdown'); c.reset(); c.setAttribute('seconds', '1'); c.start(); return c.running; })()"
+  },
+  {
+   "step": "Wait for zero",
+   "wait": 1800
+  },
+  {
+   "step": "At zero it stops, fires ui-done once and shows \"Time's up!\"",
+   "eval": "(() => { const c = document.querySelector('#outlet ui-countdown'); return !c.running && window.__done === 1 && !c.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  }
+ ]
+}
