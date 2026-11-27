@@ -1,0 +1,49 @@
+{
+ "id": "errands",
+ "title": "An errand run: three stops with sub-tasks, a progress bar and a countdown to 1pm",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Hit three stops and be back by 1pm. Build an errand page with three headed stops, Grocery, Post office and Gas, each with its own short checklist of 2 to 4 sub-tasks. Show one progress bar (not a ring) over all the sub-tasks that shows \"All errands done!\" once every sub-task is ticked, and a countdown to 1:00 pm (a clock time, not a duration) that runs by itself. Use only the components in components.json and follow docs/state-and-shell.md: stores in the stable shell, the content inside <main id=\"outlet\">, no script.",
+ "assert": [
+  {
+   "step": "Three groups of 2 to 4 sub-tasks, none ticked yet",
+   "eval": "(() => { const g = [...document.querySelectorAll('#outlet ui-each')].map(e => e.querySelectorAll('ui-todo-item').length).filter(n => n > 0); return g.length === 3 && g.every(n => n >= 2 && n <= 4) && [...document.querySelectorAll('#outlet ui-todo-item')].every(i => !i.checked); })()"
+  },
+  {
+   "step": "The groups are headed Grocery, Post office and Gas",
+   "eval": "(() => { const h = [...document.querySelectorAll('#outlet h1, #outlet h2, #outlet h3, #outlet h4')].map(x => x.textContent.toLowerCase()).join('|'); return ['grocer', 'post', 'gas'].every(w => h.includes(w)); })()"
+  },
+  {
+   "step": "One progress bar over every sub-task, at 0, with a hidden \"All errands done!\" slot",
+   "eval": "(() => { const p = document.querySelectorAll('#outlet ui-progress'); if (p.length !== 1) return false; const d = p[0].querySelector('[slot=\"done\"]'); return p[0].getAttribute('variant') === 'bar' && p[0].value === 0 && p[0].max === document.querySelectorAll('#outlet ui-todo-item').length && !!d && /done/i.test(d.textContent) && p[0].shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  },
+  {
+   "step": "A countdown to 1:00 pm, running without a click",
+   "eval": "(() => { const c = document.querySelectorAll('#outlet ui-countdown'); if (c.length !== 1 || !c[0].hasAttribute('until')) return false; const at = new Date(Date.now() + c[0].remaining * 1000); return c[0].running && c[0].remaining > 0 && at.getHours() === 13 && at.getMinutes() === 0; })()"
+  },
+  {
+   "step": "Tick the first stop's sub-tasks",
+   "eval": "(async () => { for (const i of document.querySelector('#outlet ui-each').querySelectorAll('ui-todo-item')) { i.shadowRoot.querySelector('.check').click(); await new Promise(r => setTimeout(r, 80)); } return true; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The bar moved, but is not full",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress').percent; return p > 0 && p < 100; })()"
+  },
+  {
+   "step": "Tick every remaining sub-task",
+   "eval": "(async () => { for (let n = 0; n < 15; n++) { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => !x.checked); if (!i) return true; i.shadowRoot.querySelector('.check').click(); await new Promise(r => setTimeout(r, 80)); } return false; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The bar is full and shows \"All errands done!\"",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress'); return p.percent === 100 && !p.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  }
+ ]
+}

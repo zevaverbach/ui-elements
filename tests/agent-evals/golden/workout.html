@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workout</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: start; margin-top: 12px; }
+  section { display: grid; gap: 6px; align-content: start; }
+  h2 { font-size: 1rem; margin: 0; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-each.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-progress.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-countdown.js"></script>
+</head>
+<body>
+
+<!-- stable shell: one store holds all 12 sets; each exercise is a filtered view of it -->
+<ui-store name="workout"><script type="application/json">{"items":[
+  {"id":"squat-1","exercise":"squat","text":"Set 1","done":false},
+  {"id":"squat-2","exercise":"squat","text":"Set 2","done":false},
+  {"id":"squat-3","exercise":"squat","text":"Set 3","done":false},
+  {"id":"bench-1","exercise":"bench","text":"Set 1","done":false},
+  {"id":"bench-2","exercise":"bench","text":"Set 2","done":false},
+  {"id":"bench-3","exercise":"bench","text":"Set 3","done":false},
+  {"id":"row-1","exercise":"row","text":"Set 1","done":false},
+  {"id":"row-2","exercise":"row","text":"Set 2","done":false},
+  {"id":"row-3","exercise":"row","text":"Set 3","done":false},
+  {"id":"ohp-1","exercise":"ohp","text":"Set 1","done":false},
+  {"id":"ohp-2","exercise":"ohp","text":"Set 2","done":false},
+  {"id":"ohp-3","exercise":"ohp","text":"Set 3","done":false}
+]}</script></ui-store>
+
+<main id="outlet">
+  <h1>Today's lifts</h1>
+  <div class="grid">
+    <section>
+      <h2>Squat</h2>
+      <ui-each id="sets-squat" store="workout" tag="ui-todo-item" where='{"exercise":"squat"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Bench press</h2>
+      <ui-each id="sets-bench" store="workout" tag="ui-todo-item" where='{"exercise":"bench"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Row</h2>
+      <ui-each id="sets-row" store="workout" tag="ui-todo-item" where='{"exercise":"row"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Overhead press</h2>
+      <ui-each id="sets-ohp" store="workout" tag="ui-todo-item" where='{"exercise":"ohp"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+  </div>
+  <div class="side">
+    <ui-progress id="sets-done" store="workout" where='{"done":true}' heading="Sets done" label="{value} of {max} sets">
+      <span slot="meta">Session: 45 min</span>
+      <strong slot="done">Workout done!</strong>
+    </ui-progress>
+    <ui-countdown id="rest" phases='[{"name":"Rest","seconds":90}]' label="Start rest"><strong slot="done">Rest over: next set.</strong></ui-countdown>
+    <ui-countdown id="session" seconds="2700" label="Start session"><strong slot="done">45 minutes are up.</strong></ui-countdown>
+  </div>
+</main>
+</body>
+</html>

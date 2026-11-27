@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errands</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .stops, .status { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .status { margin-bottom: 12px; align-items: start; }
+  section { display: grid; gap: 6px; align-content: start; }
+  h2 { font-size: 1rem; margin: 0; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-each.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-progress.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-countdown.js"></script>
+</head>
+<body>
+
+<!-- stable shell: one store holds every sub-task; each stop is a filtered view of it -->
+<ui-store name="errands"><script type="application/json">{"items":[
+  {"id":"g1","stop":"grocery","text":"Milk and eggs","done":false},
+  {"id":"g2","stop":"grocery","text":"Bread","done":false},
+  {"id":"g3","stop":"grocery","text":"Coffee beans","done":false},
+  {"id":"p1","stop":"post","text":"Send the parcel","done":false},
+  {"id":"p2","stop":"post","text":"Buy stamps","done":false},
+  {"id":"f1","stop":"gas","text":"Fill the tank","done":false},
+  {"id":"f2","stop":"gas","text":"Check tyre pressure","done":false}
+]}</script></ui-store>
+
+<main id="outlet">
+  <h1>Errand run</h1>
+  <div class="status">
+    <ui-progress id="errand-progress" variant="bar" store="errands" where='{"done":true}' heading="Errands" label="{value} of {max} done">
+      <span slot="meta">Back by 1:00 pm</span>
+      <strong slot="done">All errands done!</strong>
+    </ui-progress>
+    <ui-countdown id="back-by" until="13:00"><strong slot="done">It's 1pm: you should be home.</strong></ui-countdown>
+  </div>
+  <div class="stops">
+    <section>
+      <h2>Grocery</h2>
+      <ui-each id="stop-grocery" store="errands" tag="ui-todo-item" where='{"stop":"grocery"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Post office</h2>
+      <ui-each id="stop-post" store="errands" tag="ui-todo-item" where='{"stop":"post"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+    <section>
+      <h2>Gas</h2>
+      <ui-each id="stop-gas" store="errands" tag="ui-todo-item" where='{"stop":"gas"}'
+               map='{"text":"text","checked":"done"}' events='{"ui-toggle":{"action":"toggle","field":"done"}}'></ui-each>
+    </section>
+  </div>
+</main>
+</body>
+</html>

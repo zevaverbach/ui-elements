@@ -22,6 +22,9 @@ GOLDEN_DESC = {
     "kanban": "The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions.",
     "timer-60": "The reference page for the 60-second timer task (a ui-countdown with a \"Time's up!\" done slot, no script) passes the checker: it starts on click, counts down, and at zero fires ui-done and shows the done slot.",
     "glance-dashboard": "The reference page for the \"is everything okay?\" dashboard (three ui-status rows bound to one store, no script) passes the checker: the rows show ok, warn and ok in text, and when the store reports the server down that row turns bad live.",
+    "sprint": "The reference page for the afternoon-sprint task (five store-backed to-dos, a 2-hour countdown, and a progress ring with heading, standup meta, picture and \"Shipped!\" done slot) passes the checker: ticking the to-dos moves the ring, and ticking all of them fills it and shows the done slot.",
+    "workout": "The reference page for the workout task (four headed groups of three sets from one store, a sets-done progress, a 90-second Rest timer and the 45 minutes) passes the checker: the rest timer starts on click and counts down, 7 ticked sets read 7 of 12, and all 12 show the done slot.",
+    "errands": "The reference page for the errand-run task (three headed stops whose sub-tasks are filtered views of one store, a store-bound progress bar and a ui-countdown until=\"13:00\") passes the checker: the countdown runs by itself and lands on 1:00 pm, and ticking every sub-task fills the bar and shows the done slot.",
 }
 
 def golden_test(task_id, **kw):
@@ -39,6 +42,9 @@ PAGE_TASKS = ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60
 CHEAP = {"gif_ladder": [(4, 480, 48), (3, 400, 32)]}   # enough colors to keep warn and bad apart
 for _id in PAGE_TASKS:
     golden_test(_id, **(CHEAP if _id == "glance-dashboard" else {}))
+# tests/media is at its 15 MB budget, so the newer goldens are not recorded (the checker's own steps are the evidence).
+for _id in ("sprint", "workout", "errands"):
+    golden_test(_id, gif=False)
 
 # Request-kind checks load no page of their own, so the recording would be a blank screen with captions. They put the
 # evidence on screen instead: the answer being judged and the checker's verdict, one table row per check. Rows are added
@@ -218,7 +224,7 @@ def _(t):
     check(out.returncode == 0 and out.stdout.startswith("PASS kanban"), out.stdout + out.stderr)
     t.step("run_evals.py scores a folder of outputs and aggregates the metrics")
     d = tempfile.mkdtemp()
-    for tid in PAGE_TASKS:
+    for tid in PAGE_TASKS + ("sprint", "workout", "errands",):
         open(os.path.join(d, tid + ".html"), "w").write(golden(tid))
     open(os.path.join(d, IMPOSSIBLE + ".request.md"), "w").write(golden(IMPOSSIBLE, ".request.md"))
     for tid, it, tin, tout in (("shopping-list", 2, 12000, 3000), ("kanban", 1, 9000, 2500)):
@@ -229,7 +235,7 @@ def _(t):
     run = subprocess.run([sys.executable, os.path.join(EVALS, "run_evals.py"), "--outputs", d, "--out", res_file], capture_output=True, text=True)
     check(run.returncode == 1, "a failing task makes run_evals exit 1")
     r = json.load(open(res_file))["summary"]
-    eq((r["tasks"], r["passed"]), (7, 6))
-    eq(r["success_rate"], 0.857); eq(r["failures_by_code"], {"inline-script": 1})
+    eq((r["tasks"], r["passed"]), (10, 9))
+    eq(r["success_rate"], 0.9); eq(r["failures_by_code"], {"inline-script": 1})
     eq(r["mean_iterations_to_pass"], 1.5)
     eq(r["mean_tokens_per_passing_task"], 13250.0)

@@ -1,0 +1,57 @@
+{
+ "id": "sprint",
+ "title": "An afternoon sprint: to-dos that fill a progress ring, with a 2-hour deadline",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Ship this feature before standup in 2 hours. Build a sprint page: a checklist of 4 or 5 to-dos for the feature, a 2-hour countdown to the deadline that starts when clicked, and a progress ring headed \"Ship the feature\" that fills as the to-dos are ticked. Under the ring show the standup time (\"Standup at 10:00\"), a picture of the finished state, and, once every to-do is ticked, the message \"Shipped!\". The picture must be an inline <img> with a data:image/svg+xml,... src and alt text (no other network requests are allowed). Use only the components in components.json and follow docs/state-and-shell.md: stores in the stable shell, the content inside <main id=\"outlet\">, no script.",
+ "assert": [
+  {
+   "step": "4 or 5 to-dos, none ticked yet",
+   "eval": "(() => { const i = document.querySelectorAll('#outlet ui-todo-item'); return i.length >= 4 && i.length <= 5 && [...i].every(x => !x.checked); })()"
+  },
+  {
+   "step": "One progress ring headed \"Ship the feature\", starting at 0",
+   "eval": "(() => { const p = document.querySelectorAll('#outlet ui-progress'); return p.length === 1 && p[0].getAttribute('variant') !== 'bar' && /ship the feature/i.test(p[0].getAttribute('heading') || '') && p[0].percent === 0; })()"
+  },
+  {
+   "step": "Its meta slot names the standup time",
+   "eval": "(() => { const m = document.querySelector('#outlet ui-progress [slot=\"meta\"]'); return !!m && /standup/i.test(m.textContent) && /10:00/.test(m.textContent); })()"
+  },
+  {
+   "step": "Its image slot is an inline data: picture with alt text",
+   "eval": "(() => { const img = document.querySelector('#outlet ui-progress img[slot=\"image\"], #outlet ui-progress [slot=\"image\"] img'); return !!img && img.src.startsWith('data:image/') && img.alt.trim().length > 0; })()"
+  },
+  {
+   "step": "A \"Shipped!\" done slot, hidden for now",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress'); const d = p.querySelector('[slot=\"done\"]'); return !!d && /shipped/i.test(d.textContent) && p.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  },
+  {
+   "step": "A 2-hour deadline countdown, waiting for a click",
+   "eval": "(() => { const c = document.querySelectorAll('#outlet ui-countdown'); return c.length === 1 && c[0].remaining === 7200 && !c[0].running; })()"
+  },
+  {
+   "step": "Tick the first to-do",
+   "eval": "(() => { document.querySelector('#outlet ui-todo-item').shadowRoot.querySelector('.check').click(); return true; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The ring moved, but is not full",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress').percent; return p > 0 && p < 100; })()"
+  },
+  {
+   "step": "Tick every remaining to-do",
+   "eval": "(async () => { for (let n = 0; n < 10; n++) { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => !x.checked); if (!i) return true; i.shadowRoot.querySelector('.check').click(); await new Promise(r => setTimeout(r, 80)); } return false; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The ring is full and shows \"Shipped!\"",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress'); return p.percent === 100 && !p.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  }
+ ]
+}

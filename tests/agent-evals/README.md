@@ -21,6 +21,9 @@ tests/agent-evals/
 | `timer-60` | page | `ui-countdown` `seconds`/`label` and a `done` slot as the reaction at zero, no script |
 | `glance-dashboard` | page | not a checklist: an "is everything okay?" dashboard (baby, package, server) of `ui-status` rows bound to one `ui-store`; the rows show ok/warn in text and turn bad live when the store changes. A to-do list dressed up as a dashboard, or static rows, fail |
 | `recipe-rating` | **request** | rate recipes 1 to 5 stars, by pointer and keyboard, saved into a `ui-store`. No component is an input that picks a value on a small scale (`ui-progress` is an output, `ui-todo-item` steps are a to-do), so the correct output is a **request for `ui-rating`** (value, max, a change event, store binding, keyboard and slider semantics) |
+| `sprint` | page | a store-bound `ui-progress` ring (heading, meta, data: image and done slots) filled by ticking `ui-each` to-dos, and a 2-hour `ui-countdown` |
+| `workout` | page | a 4 x 3 set grid as four `where` groups over one store, a store-bound sets-done `ui-progress` ("7 of 12 sets"), and a one-phase Rest `ui-countdown` restarted per set |
+| `errands` | page | grouped (not nested) sub-tasks: three headed stops as `where` views over one store, a store-bound `variant="bar"` progress over all of them, and `ui-countdown until="13:00"` for a clock-time deadline |
 
 ## What the checker verifies
 

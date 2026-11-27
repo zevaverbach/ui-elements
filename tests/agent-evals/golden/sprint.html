@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sprint</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; align-items: start; }
+  section { display: grid; gap: 8px; align-content: start; }
+  ui-progress img { width: 120px; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-each.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-todo-item.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-progress.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-countdown.js"></script>
+</head>
+<body>
+
+<!-- stable shell: the store lives outside the outlet -->
+<ui-store name="sprint"><script type="application/json">{"items":[
+  {"id":"1","text":"Write the API endpoint","done":false},
+  {"id":"2","text":"Wire up the form","done":false},
+  {"id":"3","text":"Add tests","done":false},
+  {"id":"4","text":"Update the docs","done":false},
+  {"id":"5","text":"Open the pull request","done":false}
+]}</script></ui-store>
+
+<main id="outlet">
+  <h1>Afternoon sprint</h1>
+  <div class="cols">
+    <section>
+      <h2>To do</h2>
+      <ui-each id="sprint-tasks" store="sprint" tag="ui-todo-item"
+               map='{"text":"text","checked":"done"}'
+               events='{"ui-toggle":{"action":"toggle","field":"done"},"ui-delete":{"action":"remove"},"ui-edit":{"action":"update","patch":{"text":"$detail.text"}}}'></ui-each>
+      <ui-countdown id="deadline" seconds="7200" label="Start sprint"><strong slot="done">Time's up: go to standup.</strong></ui-countdown>
+    </section>
+    <ui-progress id="ring" store="sprint" where='{"done":true}' heading="Ship the feature" label="{value} of {max}">
+      <span slot="meta">Standup at 10:00</span>
+      <img slot="image" alt="A green check mark: the feature is shipped" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 60%22%3E%3Crect width=%22120%22 height=%2260%22 rx=%228%22 fill=%22%23e7f6ec%22/%3E%3Cpath d=%22M38 31l14 13 30-28%22 fill=%22none%22 stroke=%22%231a8f4c%22 stroke-width=%228%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22/%3E%3C/svg%3E">
+      <strong slot="done">Shipped!</strong>
+    </ui-progress>
+  </div>
+</main>
+</body>
+</html>

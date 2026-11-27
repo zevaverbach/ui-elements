@@ -1,0 +1,65 @@
+{
+ "id": "workout",
+ "title": "A workout session: a 4 x 3 set grid, sets-done progress and a rest timer",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Get through today's lifts in 45 minutes. Build a workout page for four exercises (Squat, Bench press, Row, Overhead press), each a headed group of three checkable sets (\"Set 1\" to \"Set 3\"). Show progress for the sets done, labelled like \"7 of 12 sets\", that shows \"Workout done!\" once all 12 are ticked. Add a rest timer with one phase named \"Rest\" (90 seconds) that starts on click and can be restarted after each set, and show the 45-minute session (a 45-minute countdown, or \"45 min\" in the progress meta). Use only the components in components.json and follow docs/state-and-shell.md: stores in the stable shell, the content inside <main id=\"outlet\">, no script.",
+ "assert": [
+  {
+   "step": "Four groups of three sets, none ticked yet",
+   "eval": "(() => { const g = [...document.querySelectorAll('#outlet ui-each')].map(e => e.querySelectorAll('ui-todo-item').length).filter(n => n > 0); return JSON.stringify(g) === '[3,3,3,3]' && [...document.querySelectorAll('#outlet ui-todo-item')].every(i => !i.checked); })()"
+  },
+  {
+   "step": "The groups are headed with the four exercises",
+   "eval": "(() => { const h = [...document.querySelectorAll('#outlet h1, #outlet h2, #outlet h3, #outlet h4')].map(x => x.textContent.toLowerCase()).join('|'); return ['squat', 'bench', 'row', 'overhead'].every(w => h.includes(w)); })()"
+  },
+  {
+   "step": "One progress over 12 sets, starting at 0, with a hidden \"Workout done!\" slot",
+   "eval": "(() => { const p = document.querySelectorAll('#outlet ui-progress'); if (p.length !== 1) return false; const d = p[0].querySelector('[slot=\"done\"]'); return p[0].value === 0 && p[0].max === 12 && !!d && /done/i.test(d.textContent) && p[0].shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  },
+  {
+   "step": "The 45-minute session is shown",
+   "eval": "[...document.querySelectorAll('#outlet ui-countdown')].some(c => c.remaining === 2700) || /45\\s*min/i.test(document.getElementById('outlet').textContent)"
+  },
+  {
+   "step": "A rest timer with a 90-second \"Rest\" phase, waiting for a click",
+   "eval": "(() => { const c = [...document.querySelectorAll('#outlet ui-countdown')].find(x => { try { return JSON.parse(x.getAttribute('phases') || '[]').some(p => /rest/i.test(p.name)); } catch { return false; } }); return !!c && c.remaining === 90 && !c.running; })()"
+  },
+  {
+   "step": "Click its Start button: the rest timer runs",
+   "eval": "(() => { const c = [...document.querySelectorAll('#outlet ui-countdown')].find(x => /rest/i.test(x.getAttribute('phases') || '')); c.shadowRoot.querySelector('button').click(); return c.running; })()"
+  },
+  {
+   "step": "Wait a moment (the test does not wait 90 seconds)",
+   "wait": 1300
+  },
+  {
+   "step": "The rest time has dropped",
+   "eval": "[...document.querySelectorAll('#outlet ui-countdown')].find(x => /rest/i.test(x.getAttribute('phases') || '')).remaining < 90"
+  },
+  {
+   "step": "Tick 7 sets",
+   "eval": "(async () => { for (let n = 0; n < 7; n++) { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => !x.checked); if (!i) return false; i.shadowRoot.querySelector('.check').click(); await new Promise(r => setTimeout(r, 80)); } return true; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "The progress reads 7 of 12",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress'); return p.value === 7 && /7 of 12/.test(p.shadowRoot.querySelector('[role=progressbar]').getAttribute('aria-valuetext')); })()"
+  },
+  {
+   "step": "Tick the remaining 5 sets",
+   "eval": "(async () => { for (let n = 0; n < 10; n++) { const i = [...document.querySelectorAll('#outlet ui-todo-item')].find(x => !x.checked); if (!i) return true; i.shadowRoot.querySelector('.check').click(); await new Promise(r => setTimeout(r, 80)); } return false; })()"
+  },
+  {
+   "step": "Wait for the store to update",
+   "wait": 250
+  },
+  {
+   "step": "All 12 done: the progress is full and shows \"Workout done!\"",
+   "eval": "(() => { const p = document.querySelector('#outlet ui-progress'); return p.value === 12 && p.percent === 100 && !p.shadowRoot.querySelector('slot[name=\"done\"]').parentElement.hidden; })()"
+  }
+ ]
+}
