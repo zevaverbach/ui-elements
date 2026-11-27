@@ -147,8 +147,15 @@ def _(t):
     t.step("Without a reduced-motion preference the panel animates (~250ms)", "#c")
     dur = p.evaluate(f"parseFloat(getComputedStyle({panel('.panel')}).transitionDuration)")
     check(0.2 <= dur <= 0.3, f"expected ~0.25s, got {dur}s")
-    p.evaluate("document.getElementById('c').show()"); p.wait_for_timeout(50)
-    check(rect(p, "#c .panel")["right"] > VW + 20, "still sliding in 50ms after opening")
+    # Sample inside the page: a Python-side wait plus rect() (a locator round trip) can land 150+ ms
+    # after show(), when the 250 ms slide is nearly done, so it measured Playwright latency, not the panel.
+    at, right = p.evaluate(f"""() => new Promise(res => {{
+      const c = document.getElementById('c'), pn = {panel('.panel')}, t0 = performance.now();
+      c.show();
+      const f = () => {{ const dt = performance.now() - t0;
+        dt >= 50 ? res([Math.round(dt), pn.getBoundingClientRect().right]) : requestAnimationFrame(f); }};
+      requestAnimationFrame(f); }})""")
+    check(right > VW + 20, f"still sliding 50ms after opening: right edge {right:.0f}px at {at}ms, expected > {VW + 20}")
     settle(t)
     eq(rect(p, "#c .panel")["right"], VW)
     t.step("--ui-chat-panel-duration changes the speed", "#c")
