@@ -2,7 +2,7 @@
 """Check an agent-generated page (or a written component request) against a task. No LLM calls.
 
     python3 tests/agent-evals/check.py --task shopping-list --html out/shopping-list.html
-    python3 tests/agent-evals/check.py --task glance-dashboard --request out/glance-dashboard.request.md
+    python3 tests/agent-evals/check.py --task recipe-rating --request out/recipe-rating.request.md
 
 What is verified for a page (each failure has a short code, shown in brackets):
   static     only tags from components.json plus plain layout/text tags         [unknown-tag, disallowed-tag]

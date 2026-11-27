@@ -1,0 +1,11 @@
+{
+ "id": "recipe-rating",
+ "title": "Not a progress bar: rate recipes with 1 to 5 stars, which needs a new rating component",
+ "kind": "request",
+ "prompt": "Build a recipe list where each of three recipes (\"Lentil soup\", \"Shakshuka\", \"Banana bread\") can be rated from 1 to 5 stars. Clicking a star sets the rating, the rating can also be changed with the keyboard (arrow keys), screen readers hear the current value (\"3 of 5 stars\"), and the chosen rating is saved into the recipe's \"rating\" field in a <ui-store name=\"recipes\"> (for example {\"items\": [{\"id\": \"soup\", \"title\": \"Lentil soup\", \"rating\": 4}, ...]}) so it survives an outlet swap. No inline script. A rating is an input, not progress or a to-do: nothing is checked off and nothing counts toward a goal. If the library's components cannot do this honestly, do NOT write inline script, onclick handlers, or a progress bar or to-do item dressed up as stars. Instead write a request for a new component (request.md): what is missing, why no existing component fits, and the proposed tag with its attributes, events, slots and CSS custom properties, following CLAUDE.md.",
+ "must_mention": [
+  "rating",
+  "store",
+  "keyboard"
+ ]
+}

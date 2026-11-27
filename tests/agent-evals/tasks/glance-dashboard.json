@@ -1,11 +1,41 @@
 {
  "id": "glance-dashboard",
- "title": "Not a checklist: an \"is everything okay?\" glance dashboard, which needs a new status component",
- "kind": "request",
- "prompt": "Build a glance dashboard that answers \"is everything okay?\" at a look. It shows three rows: the baby monitor (\"Sleeping since 13:10\"), a package (\"En route, arriving today\") and the home server (\"Up, 12 days\"). Each row has a label, a one-line detail and a state of ok, warn or bad that is visible at a glance (color plus text, not color alone). The values arrive in a <ui-store name=\"home\"> (for example {\"baby\": {\"state\": \"ok\", \"detail\": \"Sleeping since 13:10\"}, ...}) and the rows must update live when the store changes, with no inline script. This is a monitor, not a to-do list: nothing is checked off. If the library's components cannot do this honestly, do NOT write inline script, onclick handlers or a to-do list dressed up as a dashboard. Instead write a request for a new component (request.md): what is missing, why no existing component fits, and the proposed tag with its attributes, events, slots and CSS custom properties, following CLAUDE.md.",
- "must_mention": [
-  "status",
-  "store",
-  "warn"
+ "title": "Not a checklist: an \"is everything okay?\" glance dashboard whose status rows update live from a store",
+ "kind": "page",
+ "shell": true,
+ "prompt": "Build a glance dashboard that answers \"is everything okay?\" at a look. It shows three rows: the baby monitor (state ok, \"Sleeping since 13:10\"), a package (state warn, \"En route, arriving today\") and the home server (state ok, \"Up, 12 days\"). Each row has a label, a one-line detail and a state of ok, warn or bad that is visible at a glance (color plus text, not color alone). The values live in a <ui-store name=\"home\"> in the page shell, shaped {\"baby\": {\"state\": \"ok\", \"detail\": \"Sleeping since 13:10\"}, \"package\": {...}, \"server\": {...}}, and the rows must update live when the store changes (for example when server.state becomes \"bad\"), with no inline script. This is a monitor, not a to-do list: nothing is checked off. Put the rows inside <main id=\"outlet\">. Use the library's components; do NOT write inline script or onclick handlers.",
+ "assert": [
+  {
+   "step": "Three status rows in the outlet, and no to-do list dressed up as a dashboard",
+   "eval": "document.querySelectorAll('#outlet ui-status').length === 3 && !document.querySelector('#outlet ui-todo-item, #outlet ui-progress')"
+  },
+  {
+   "step": "Baby: ok, \"Sleeping since 13:10\"",
+   "eval": "(() => { const s = [...document.querySelectorAll('#outlet ui-status')].find(x => /baby/i.test(x.label)); return !!s && s.state === 'ok' && s.detail === 'Sleeping since 13:10'; })()"
+  },
+  {
+   "step": "Package: warn; server: ok",
+   "eval": "(() => { const f = (re) => [...document.querySelectorAll('#outlet ui-status')].find(x => re.test(x.label)); return f(/package/i)?.state === 'warn' && f(/server/i)?.state === 'ok' && f(/server/i).detail === 'Up, 12 days'; })()"
+  },
+  {
+   "step": "The state is written out in text, not shown by color alone",
+   "eval": "(() => { const s = [...document.querySelectorAll('#outlet ui-status')].find(x => /package/i.test(x.label)); return /warning/i.test(s.shadowRoot.textContent); })()"
+  },
+  {
+   "step": "The store reports the server down (a ui-action on the home store)",
+   "eval": "(() => { for (const [path, value] of [['server.state', 'bad'], ['server.detail', 'Down since 14:02']]) document.dispatchEvent(new CustomEvent('ui-action', {detail: {store: 'home', action: 'set', payload: {path, value}}})); return true; })()"
+  },
+  {
+   "step": "Wait a moment",
+   "wait": 200
+  },
+  {
+   "step": "The server row turned bad live, says so in text and shows the new detail",
+   "eval": "(() => { const s = [...document.querySelectorAll('#outlet ui-status')].find(x => /server/i.test(x.label)); return s.state === 'bad' && s.detail === 'Down since 14:02' && /problem/i.test(s.shadowRoot.textContent); })()"
+  },
+  {
+   "step": "The other rows did not change",
+   "eval": "(() => { const f = (re) => [...document.querySelectorAll('#outlet ui-status')].find(x => re.test(x.label)); return f(/baby/i).state === 'ok' && f(/package/i).state === 'warn'; })()"
+  }
  ]
 }

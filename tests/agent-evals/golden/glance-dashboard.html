@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Is everything okay?</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/tokens.css">
+<style>
+  body { margin: 0; padding: 16px; background: var(--ui-color-bg); color: var(--ui-color-text); font-family: var(--ui-font); }
+  #outlet { display: grid; gap: 8px; max-width: 420px; }
+  h1 { font-size: 1.2rem; margin: 0 0 4px; }
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@main/components/ui-status.js"></script>
+</head>
+<body>
+<ui-store name="home"><script type="application/json">{
+  "baby": {"state": "ok", "detail": "Sleeping since 13:10"},
+  "package": {"state": "warn", "detail": "En route, arriving today"},
+  "server": {"state": "ok", "detail": "Up, 12 days"}
+}</script></ui-store>
+
+<main id="outlet">
+  <h1>Is everything okay?</h1>
+  <ui-status id="baby" label="Baby monitor" store="home" path="baby"></ui-status>
+  <ui-status id="package" label="Package" store="home" path="package"></ui-status>
+  <ui-status id="server" label="Home server" store="home" path="server"></ui-status>
+</main>
+</body>
+</html>

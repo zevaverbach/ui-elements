@@ -20,6 +20,7 @@ export const baseCss = `
   --_on-accent: var(--ui-color-on-accent, light-dark(#ffffff, #0f1117));
   --_danger: var(--ui-color-danger, light-dark(#cf222e, #f85149));
   --_success: var(--ui-color-success, light-dark(#1a7f37, #3fb950));
+  --_warning: var(--ui-color-warning, light-dark(#9a6700, #d29922));
   --_space: var(--ui-space, 12px);
   --_radius: var(--ui-radius, 8px);
   --_font: var(--ui-font, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);

@@ -21,6 +21,7 @@ GOLDEN_DESC = {
     "chat-left": "The reference page for the support-chat task (a chat panel that opens from the left with a placeholder and a first message) passes the checker and its browser assertions.",
     "kanban": "The reference page for the three-column board task (filtered views of one store, with confirm-to-delete) passes the checker and its browser assertions.",
     "timer-60": "The reference page for the 60-second timer task (a ui-countdown with a \"Time's up!\" done slot, no script) passes the checker: it starts on click, counts down, and at zero fires ui-done and shows the done slot.",
+    "glance-dashboard": "The reference page for the \"is everything okay?\" dashboard (three ui-status rows bound to one store, no script) passes the checker: the rows show ok, warn and ok in text, and when the store reports the server down that row turns bad live.",
 }
 
 def golden_test(task_id, **kw):
@@ -33,8 +34,11 @@ def golden_test(task_id, **kw):
         check(res["passed"], f"golden solution for {task_id} was rejected: {explain(res)}")
     return _
 
-for _id in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
-    golden_test(_id)
+PAGE_TASKS = ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60", "glance-dashboard")
+# tests/media is close to its 15 MB budget: the newest recordings use cheaper GIF settings.
+CHEAP = {"gif_ladder": [(4, 480, 48), (3, 400, 32)]}   # enough colors to keep warn and bad apart
+for _id in PAGE_TASKS:
+    golden_test(_id, **(CHEAP if _id == "glance-dashboard" else {}))
 
 # Request-kind checks load no page of their own, so the recording would be a blank screen with captions. They put the
 # evidence on screen instead: the answer being judged and the checker's verdict, one table row per check. Rows are added
@@ -73,13 +77,17 @@ def row(t, cells, ok, excerpt=None):
 def codes(res):
     return "PASS" if res["passed"] else ", ".join(sorted({i["code"] for i in res["issues"]}))
 
-@test("agent-evals", "golden-glance-dashboard-is-a-request", desc='For a task that is not a checklist (an "is everything okay?" dashboard with ok/warn/bad rows that update from a store), the library has no status component, so the correct answer is a written request for one (ui-status), and the checker accepts it.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 380})
+# The one task no component can do. When a component for it ships, convert this task to a page task and add a new
+# request task for something still missing (see tests/agent-evals/README.md, "The request task").
+IMPOSSIBLE = "recipe-rating"
+
+@test("agent-evals", "golden-recipe-rating-is-a-request", desc='For a task that needs an input the library does not have (rate recipes 1 to 5 stars, by pointer and keyboard, saved into a store), the correct answer is a written request for a new component (ui-rating), and the checker accepts it (no recording: the control row of the cheating test below shows the same verdict).', gif=False, viewport={"width": 640, "height": 380})
 def _(t):
-    task = ev.load_task("glance-dashboard")
-    good = golden("glance-dashboard", ".request.md")
+    task = ev.load_task(IMPOSSIBLE)
+    good = golden(IMPOSSIBLE, ".request.md")
     board(t, "Request task: " + task["title"], "Submitted", "Checker")
     show(t, "Task prompt: " + task["prompt"], chars=200)
-    t.step("Task: a live status dashboard that no component can do")
+    t.step("Task: a star rating input that no component can do")
     outline = [l for l in good.splitlines() if l.startswith(("#", "**"))]   # headings: what the checker looks for
     show(t, "request.md, outline:\n" + "\n".join(l[:60] for l in outline), chars=400)
     t.step("Correct output: a written request for a new component, no script")
@@ -131,56 +139,76 @@ def _(t):
     t.step("Result: " + ("every bad output was rejected for the right reason" if not wrong else f"{len(wrong)} wrong verdicts"))
     check(not wrong, "checker verdicts were wrong:\n  " + "\n  ".join(wrong))
 
-@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task with inline script or other workarounds is rejected; only a proper component request passes.', gif_ladder=TEXT_LADDER, viewport={"width": 640, "height": 370})
+@test("agent-evals", "checker-rejects-cheating-on-the-impossible-task", desc='Answering the impossible task (star ratings) with inline script, an onclick handler, to-do progress steps dressed up as stars, or a request that proposes nothing new, only an existing tag, or ignores the rating, the store or the keyboard is rejected; only a proper component request passes.', gif_ladder=[(4, 560, 8), (3, 480, 8)], viewport={"width": 640, "height": 420})
 def _(t):
-    task = ev.load_task("glance-dashboard")
-    good = golden("glance-dashboard", ".request.md")
-    unaware = re.sub("store", "source", re.sub("status", "widget", good, flags=re.I), flags=re.I)
+    task = ev.load_task(IMPOSSIBLE)
+    good = golden(IMPOSSIBLE, ".request.md")
+    stars = ("<main id='outlet'><ui-todo-item text='Lentil soup' progress='75'></ui-todo-item>"
+             "<ui-todo-item text='Shakshuka' progress='50'></ui-todo-item></main>")
     cases = [
-        ("inline script instead of a request", dict(html="<main id='outlet'><p id='server'>Server</p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
-        ("onclick instead of a request",       dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
-        ("no request at all",                  dict(html=None, request=None), "request-incomplete"),
-        ("a request that proposes nothing new", dict(request="I built the dashboard with ui-todo-item and ui-each over a store. It works. " * 8), "request-incomplete"),
-        ("too short",                          dict(request="Please add ui-status."), "request-incomplete"),
-        ("ignores the capability",             dict(request=unaware), "request-incomplete"),
+        ("inline script instead of a request",  dict(html="<main id='outlet'><p id='stars'>*****</p><script>stars.onclick=()=>{}</script></main>", request=good), "script-in-outlet"),
+        ("onclick instead of a request",        dict(html="<main id='outlet'><button onclick=\"rate(3)\">3 stars</button></main>", request=good), "inline-handler"),
+        ("to-do steps dressed up as stars",     dict(html=stars, request=None), "request-incomplete"),
+        ("no request at all",                   dict(html=None, request=None), "request-incomplete"),
+        ("a request that proposes nothing new", dict(request="I rated the recipes with ui-todo-item progress steps and ui-each over a store. It works. " * 8), "request-incomplete"),
+        ("proposes an existing tag only",       dict(request=good.replace("`ui-rating-change`", "a change event").replace("ui-rating", "ui-progress")), "request-incomplete"),
+        ("too short",                           dict(request="Please add ui-rating."), "request-incomplete"),
+        ("ignores the capability",              dict(request=re.sub("rating", "score", good, flags=re.I)), "request-incomplete"),
+        ("ignores the store",                   dict(request=re.sub("store", "source", good, flags=re.I)), "request-incomplete"),
+        ("ignores the keyboard",                dict(request=re.sub("keyboard", "input", good, flags=re.I)), "request-incomplete"),
     ]
     board(t, "Bad answers to the impossible task (" + task["id"] + ")", "Bad output", "Expected", "Checker said")
-    t.dwell = min(t.dwell, 0.3)                      # seven screens of text: keep the GIF inside the media budget
+    t.dwell = min(t.dwell, 0.3)                      # many screens of text: keep the GIF inside the media budget
     wrong = []
     for name, kw, code in cases:
         res = ev.check_output(t, task, **kw)
         right = not res["passed"] and code in {i["code"] for i in res["issues"]}
-        answer = kw.get("html") or kw.get("request") or "(nothing submitted)"
-        row(t, [name, code, codes(res)], right, re.sub(r"\s+", " ", answer)[:60])
+        others = len({i["code"] for i in res["issues"]}) - 1
+        said = f"{code} (+{others} more)" if right and others else codes(res)
+        # One line per row so the whole table fits: only submitted pages get an excerpt; the request variants are named.
+        row(t, [name, code, said], right, re.sub(r"\s+", " ", kw["html"])[:60] if kw.get("html") else None)
         t.step(f"Bad output: {name} -> expect [{code}]")
         if not right:
             wrong.append(f"{name}: {explain(res) or 'PASS'}")
     res = ev.check_output(t, task, request=good)
-    row(t, ["control: the proper request", "PASS", codes(res)], res["passed"], re.sub(r"\s+", " ", good)[:60])
+    row(t, ["control: the proper request", "PASS", codes(res)], res["passed"])
     t.step("Control: the proper request still passes")
     check(res["passed"], "the golden request must pass: " + explain(res))
     check(not wrong, "; ".join(wrong))
 
-@test("agent-evals", "checker-rejects-cheating-on-the-dashboard", desc='Answering the dashboard task with a to-do list dressed up as a dashboard, inline script, or a request that ignores the store or the warn state is rejected; only a proper ui-status request passes.', viewport={"width": 640, "height": 300})
+# Bad answers to the dashboard task, now that ui-status exists: each is a page (or no page) and must be rejected.
+DASH = "glance-dashboard"
+STATIC_ROWS = """<ui-status id="baby" label="Baby monitor" state="ok" detail="Sleeping since 13:10"></ui-status>
+  <ui-status id="package" label="Package" state="warn" detail="En route, arriving today"></ui-status>
+  <ui-status id="server" label="Home server" state="ok" detail="Up, 12 days"></ui-status>"""
+def rows_of(h):
+    return h[h.index('  <ui-status id="baby"'):h.index("</main>")]
+DASH_CASES = [
+    ("to-do items dressed up as a dashboard", lambda h: h.replace(rows_of(h), '<ui-todo-item text="Baby: sleeping" checked></ui-todo-item>\n  <ui-todo-item text="Package: en route"></ui-todo-item>\n  <ui-todo-item text="Server: up" checked></ui-todo-item>\n').replace("components/ui-status.js", "components/ui-todo-item.js"), "assertion-failed"),
+    ("rows not bound to the store (never update)", lambda h: h.replace(rows_of(h), STATIC_ROWS + "\n"), "assertion-failed"),
+    ("inline script that rewrites the rows",  lambda h: h.replace("</main>", "<script>setInterval(() => {}, 1000)</script>\n</main>"), "script-in-outlet"),
+    ("onclick refresh button",                lambda h: h.replace("</main>", '<button onclick="location.reload()">Refresh</button>\n</main>'), "inline-handler"),
+    ("state by color only (invented attribute)", lambda h: h.replace('path="package"', 'path="package" color="orange"'), "undocumented-attribute"),
+    ("ui-status used but not imported",       lambda h: "\n".join(l for l in h.split("\n") if "ui-status.js" not in l), "missing-module-import"),
+    ("a component request instead of the page", None, "no-output"),
+]
+
+@test("agent-evals", "checker-rejects-cheating-on-the-dashboard", desc='Now that ui-status exists, the dashboard task wants a page: a to-do list dressed up as a dashboard, rows that are not bound to the store, inline script, an onclick handler, an invented color attribute, a missing import or a component request instead of the page are all rejected.', gif=False, viewport={"width": 640, "height": 360})
 def _(t):
-    task = ev.load_task("glance-dashboard")
-    good = golden("glance-dashboard", ".request.md")
-    todo_page = ("<main id='outlet'><ui-todo-item text='Baby: sleeping' checked></ui-todo-item>"
-                 "<ui-todo-item text='Package: en route'></ui-todo-item></main>")
-    cases = [
-        ("to-do items dressed up as a dashboard", dict(html=todo_page, request=None), "request-incomplete"),
-        ("inline script that rewrites rows",      dict(html="<main id='outlet'><p id='baby'></p><script>setInterval(()=>{},1000)</script></main>", request=good), "script-in-outlet"),
-        ("onclick refresh button",                dict(html="<main id='outlet'><button onclick=\"refresh()\">Refresh</button></main>", request=good), "inline-handler"),
-        ("proposes an existing tag only",          dict(request=good.replace("`ui-status-change`", "a change event").replace("ui-status", "ui-progress")), "request-incomplete"),
-        ("ignores the store",                     dict(request=re.sub("store", "source", good, flags=re.I)), "request-incomplete"),
-        ("ignores the warn state",                dict(request=re.sub("warn", "amber", good, flags=re.I)), "request-incomplete"),
-    ]
+    task = ev.load_task(DASH)
+    base = golden(DASH)
     wrong = []
-    for name, kw, code in cases:
+    for name, mutate, code in DASH_CASES:
         t.step(f"Bad output: {name} -> expect [{code}]")
-        res = ev.check_output(t, task, **kw)
+        if mutate is None:
+            res = ev.check_output(t, task, html=None, request=golden(IMPOSSIBLE, ".request.md").replace("ui-rating", "ui-status-board"))
+        else:
+            html = mutate(base)
+            check(html != base, f"case '{name}' did not change the page")
+            res = ev.check_output(t, task, html=html)
         if res["passed"] or code not in {i["code"] for i in res["issues"]}:
-            wrong.append(f"{name}: {explain(res) or 'PASS'}")
+            wrong.append(f"{name}: expected [{code}], checker said {explain(res) or 'PASS'}")
+    t.step("Result: " + ("every bad answer was rejected for the right reason" if not wrong else f"{len(wrong)} wrong verdicts"))
     check(not wrong, "; ".join(wrong))
 
 @test("agent-evals", "cli-and-aggregate-scoring", desc='check.py works as a command-line tool, and run_evals.py scores a folder of outputs and aggregates success rate and iterations.', needs_idiomorph=True, gif=False, viewport={"width": 640, "height": 300})
@@ -190,9 +218,9 @@ def _(t):
     check(out.returncode == 0 and out.stdout.startswith("PASS kanban"), out.stdout + out.stderr)
     t.step("run_evals.py scores a folder of outputs and aggregates the metrics")
     d = tempfile.mkdtemp()
-    for tid in ("shopping-list", "todo-progress", "chat-left", "kanban", "timer-60"):
+    for tid in PAGE_TASKS:
         open(os.path.join(d, tid + ".html"), "w").write(golden(tid))
-    open(os.path.join(d, "glance-dashboard.request.md"), "w").write(golden("glance-dashboard", ".request.md"))
+    open(os.path.join(d, IMPOSSIBLE + ".request.md"), "w").write(golden(IMPOSSIBLE, ".request.md"))
     for tid, it, tin, tout in (("shopping-list", 2, 12000, 3000), ("kanban", 1, 9000, 2500)):
         json.dump({"iterations": it, "tokens_in": tin, "tokens_out": tout}, open(os.path.join(d, tid + ".meta.json"), "w"))
     # break one output: it must show up as a failure and lower the success rate
@@ -201,7 +229,7 @@ def _(t):
     run = subprocess.run([sys.executable, os.path.join(EVALS, "run_evals.py"), "--outputs", d, "--out", res_file], capture_output=True, text=True)
     check(run.returncode == 1, "a failing task makes run_evals exit 1")
     r = json.load(open(res_file))["summary"]
-    eq((r["tasks"], r["passed"]), (6, 5))
-    eq(r["success_rate"], 0.833); eq(r["failures_by_code"], {"inline-script": 1})
+    eq((r["tasks"], r["passed"]), (7, 6))
+    eq(r["success_rate"], 0.857); eq(r["failures_by_code"], {"inline-script": 1})
     eq(r["mean_iterations_to_pass"], 1.5)
     eq(r["mean_tokens_per_passing_task"], 13250.0)

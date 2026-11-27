@@ -120,6 +120,25 @@
     </div>
   </div>
 
+  <h2>ui-status</h2>
+  <p class="note">Live status rows for an "is everything okay?" dashboard. Each row is bound to one object in a store (<code>store="house" path="server"</code>), so the buttons below, which only change the store, update the rows with no script in the rows themselves. The state is written out (OK, Warning, Problem), not only colored, and changes are announced to screen readers.</p>
+  <ui-store name="house"><script type="application/json">{
+    "baby":{"state":"ok","detail":"Sleeping since 13:10"},
+    "package":{"state":"warn","detail":"En route, arriving today"},
+    "server":{"state":"ok","detail":"Up, 12 days"}
+  }</script></ui-store>
+  <div class="stack" id="glance" style="max-width:32rem">
+    <ui-status id="st-baby" label="Baby" store="house" path="baby"></ui-status>
+    <ui-status id="st-package" label="Package" store="house" path="package"></ui-status>
+    <ui-status id="st-server" label="Server" store="house" path="server"></ui-status>
+    <ui-status label="Backups" state="unknown" detail="No report yet"></ui-status>
+  </div>
+  <div class="bar">
+    <button class="demo" id="server-down">Server goes down</button>
+    <button class="demo" id="server-up">Server back up</button>
+    <button class="demo" id="package-here">Package delivered</button>
+  </div>
+
   <h2>Event log</h2>
   <pre id="log" aria-live="off">(events appear here)</pre>
 </main>
@@ -135,6 +154,7 @@
 <script type="module" src="../components/ui-each.js"></script>
 <script type="module" src="../components/ui-countdown.js"></script>
 <script type="module" src="../components/ui-progress.js"></script>
+<script type="module" src="../components/ui-status.js"></script>
 <script type="module">
   import { setTranscriber } from '../components/_shared/speech.js';
   // Stub backend STT so the fallback path (e.g. Firefox, or speech="backend") is demonstrable.
@@ -145,7 +165,7 @@
     log.textContent = (log.textContent.startsWith('(') ? '' : log.textContent + '\n') + `${name} ${JSON.stringify(detail)}`;
     log.scrollTop = log.scrollHeight;
   };
-  for (const n of ['ui-toggle', 'ui-edit', 'ui-delete', 'ui-transcript', 'ui-speech-error', 'ui-progress', 'ui-reorder', 'ui-send', 'ui-open', 'ui-close'])
+  for (const n of ['ui-toggle', 'ui-edit', 'ui-delete', 'ui-transcript', 'ui-speech-error', 'ui-progress', 'ui-reorder', 'ui-send', 'ui-open', 'ui-close', 'ui-status-change'])
     document.addEventListener(n, (e) => note(n, e.detail));
 
   $('#theme').onclick = () => {
@@ -215,6 +235,11 @@
 <ui-each id="rows" store="demo" tag="ui-todo-item"
   ${MAP}
   ${EVENTS}></ui-each>`,
+    'Glance dashboard (ui-status)': `<h3>Is everything okay?</h3>
+<ui-status id="g-baby" label="Baby" store="house" path="baby"></ui-status>
+<ui-status id="g-package" label="Package" store="house" path="package"></ui-status>
+<ui-status id="g-server" label="Server" store="house" path="server"></ui-status>
+<p>Bound to the <code>house</code> store; use the buttons in the ui-status section below to change it.</p>`,
     'Standalone items (no store)': `<h3>Plain components</h3>
 <ui-todo-item id="s1" text="A plain item"></ui-todo-item>
 <ui-todo-item id="s2" text="With progress and a label" label="Medium" progress="50"></ui-todo-item>
@@ -268,6 +293,11 @@
   // Reset to the seed the page was loaded with (read from the store's own JSON, so the two cannot drift apart).
   const SEED = JSON.parse(document.querySelector('ui-store[name="demo"] script').textContent);
   $('#live-reset').onclick = () => set('demo', '', structuredClone(SEED));
+  // The ui-status demo: the buttons only change the store; the rows follow it.
+  const house = (path, value) => set('house', path, value);
+  $('#server-down').onclick = () => house('server', { state: 'bad', detail: `Down since ${new Date().toTimeString().slice(0, 5)}` });
+  $('#server-up').onclick = () => house('server', { state: 'ok', detail: 'Up, just restarted' });
+  $('#package-here').onclick = () => house('package', { state: 'ok', detail: 'Delivered, at the door' });
   render().then(data);
 </script>
 </body>

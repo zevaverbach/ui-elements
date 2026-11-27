@@ -16,6 +16,7 @@
       "--ui-color-on-accent",
       "--ui-color-danger",
       "--ui-color-success",
+      "--ui-color-warning",
       "--ui-space",
       "--ui-radius",
       "--ui-font",
@@ -406,7 +407,8 @@
       "composes-well-with": [
         "ui-each",
         "ui-chat-panel",
-        "ui-progress"
+        "ui-progress",
+        "ui-status"
       ],
       "composed-in": [],
       "notes": "Declare stores in the stable shell, outside the swapped outlet. Safe inside the outlet too: data is not deleted when the element is removed. Seed is used only when no store of that name exists. Values must be JSON-serializable."
@@ -488,7 +490,8 @@
       "composes-well-with": [
         "ui-todo-item",
         "ui-store",
-        "ui-progress"
+        "ui-progress",
+        "ui-status"
       ],
       "composed-in": [],
       "notes": "The child tag is supplied by `tag`, so any component whose attributes and events fit map/events works. ui-each must have a ui-store with the same name somewhere in the page (stores are routed by name)."
@@ -687,6 +690,81 @@
       ],
       "composed-in": [],
       "notes": "Doubles as the goal card: heading + image + meta + done slots. Bind it to the same store as a ui-each list (store + where) to make the ring follow checked items without script."
+    },
+    {
+      "tag": "ui-status",
+      "file": "components/ui-status.js",
+      "description": "One live status row for a glance dashboard: an indicator, a label, a one-line detail and a state of ok, warn, bad or unknown, written out in text as well as color. Optional store binding.",
+      "attributes": [
+        {
+          "name": "state",
+          "type": "ok|warn|bad|unknown",
+          "description": "The state. Default unknown; any other value counts as unknown. The badge text (OK, Warning, Problem, Unknown) and the color follow it."
+        },
+        {
+          "name": "label",
+          "type": "string",
+          "description": "What is being watched, e.g. \"Baby\"."
+        },
+        {
+          "name": "detail",
+          "type": "string",
+          "description": "The one-line detail, e.g. \"Sleeping since 13:10\"."
+        },
+        {
+          "name": "store",
+          "type": "string",
+          "description": "Name of a <ui-store>. When set, the row re-renders on every store change from the object at path; each of its state, label and detail fields that is present wins over the attribute of the same name."
+        },
+        {
+          "name": "path",
+          "type": "string",
+          "description": "Dot path to an object {state, label, detail} in the store, e.g. \"baby\". Default \"\" (the store root). A plain string there is taken as the state."
+        }
+      ],
+      "properties": [
+        "state (the effective state, also when bound)",
+        "label",
+        "detail"
+      ],
+      "slots": [
+        {
+          "name": "icon",
+          "description": "Replaces the default colored dot; it gets the state color as `color`."
+        },
+        {
+          "name": "detail",
+          "description": "Rich detail content, shown instead of the detail attribute."
+        }
+      ],
+      "events": [
+        {
+          "name": "ui-status-change",
+          "detail": "{state: string, previous: string, label: string}",
+          "description": "The effective state changed after the first render (attribute, property or store). Not fired for detail-only changes."
+        }
+      ],
+      "cssCustomProperties": [
+        "--ui-status-ok",
+        "--ui-status-warn",
+        "--ui-status-bad",
+        "--ui-status-unknown",
+        "--ui-status-bg"
+      ],
+      "parts": [
+        "row",
+        "label",
+        "detail",
+        "badge"
+      ],
+      "composes-well-with": [
+        "ui-store",
+        "ui-each"
+      ],
+      "composed-in": [
+        "ui-each (one row per store item)"
+      ],
+      "notes": "For an \"is everything okay?\" dashboard: one ui-status per thing watched, each with store + path into one <ui-store>, so the rows update live with no script. A state change is announced in a live region (assertive for bad). For a list in the store, use <ui-each tag=\"ui-status\" map='{\"state\":\"state\",\"label\":\"label\",\"detail\":\"detail\"}'>."
     }
   ],
   "compositions": [

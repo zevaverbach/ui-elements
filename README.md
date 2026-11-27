@@ -80,6 +80,23 @@ Add an item from code: `list.prepend(Object.assign(document.createElement('ui-to
 
 Use `side="left"` or `side="bottom"` to slide from another edge, or `chat.messages = [{ role: 'user', text: 'Hi' }]` to load history.
 
+### A glance dashboard that updates from a store
+
+One `ui-status` per thing you watch, each bound to an object in one store. Whatever updates the store (your poller, a websocket, an agent's `ui-action`) updates the rows; the state is written out ("OK", "Warning", "Problem"), not only colored, and changes are announced to screen readers.
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/ui-store.js"></script>
+<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/ui-status.js"></script>
+
+<ui-store name="house"><script type="application/json">
+  {"baby": {"state": "ok", "detail": "Sleeping since 13:10"}, "server": {"state": "ok", "detail": "Up, 12 days"}}
+</script></ui-store>
+<ui-status label="Baby" store="house" path="baby"></ui-status>
+<ui-status label="Server" store="house" path="server"></ui-status>
+```
+
+Listen for `ui-status-change` (`{state, previous, label}`) to notify someone when a row goes bad. Without `store`, set `state`, `label` and `detail` as attributes.
+
 ### Composing both, and theming
 
 Wire the two together in plain JS, as [`demo/index.html`](demo/index.html) does (the chat answers "how many left?" by reading the list). Retheme everything with tokens, no component edits:
@@ -98,6 +115,7 @@ ui-chat-panel { --ui-chat-panel-width: 24rem; }
 | `ui-store` | Non-visual named JSON state (optionally persisted) that survives UI swaps |
 | `ui-countdown` | Countdown timer for a duration (with optional phases) or to a clock time (`until`), start/pause, warning state and a done slot |
 | `ui-progress` | Progress ring or bar with a goal line, heading, image, deadline and a finish-line slot. Optional `store` binding: counts items matching `where` (e.g. checked to-dos), label placeholders `{value}`/`{max}`/`{percent}` |
+| `ui-status` | Live status row for glance dashboards ("baby: sleeping / server: up"): label, detail and an ok/warn/bad/unknown state written out as well as colored, changes announced. Optional `store` + `path` binding to an object `{state, label, detail}` |
 | `ui-each` | Renders one child component per item of a store array and maps its events to store actions |
 
 Full API for each is in the file header and in `components.json`. Design provenance: [`docs/inventory.md`](docs/inventory.md).
