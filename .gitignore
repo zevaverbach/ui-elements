@@ -5,3 +5,4 @@ tests/.cache/
 tests/screenshots/
 __pycache__/
 *.pyc
+dist/

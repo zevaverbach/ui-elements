@@ -37,6 +37,7 @@ Exit code is 1 if any test fails. Tests are headless and offline: all requests t
 | **E. `consume`** | a blank page on one origin imports components from a second origin that mimics the jsDelivr layout (`/gh/<user>/<repo>@<ref>/<path>`, CORS): relative `./_shared/*.js` imports work, every catalog module loads, `swapOutlet` finds `components.json` relative to itself; plus one online check against real jsDelivr (skips when offline or the tag does not exist) | proves the no-build, CDN-only promise |
 | **F. `agent-evals`** | tasks, golden solutions and a checker (tags, attributes, script rules, wiring, console errors, task assertions). The goldens must pass; 34 kinds of bad output must be rejected with the right code, including a to-do list dressed up as a status dashboard or rows that never update, and inline script or to-do steps dressed up as stars on the one task no component can do (a star rating input), where the right answer is a written request for a new component | lets you measure agents without an LLM in the repo; see [agent-evals/README.md](agent-evals/README.md) |
 | **G. `visual`, `demo-pages`** | light/dark screenshots of every demo page (only the dark pass is recorded) (background luminance, no horizontal overflow, non-blank, light != dark), light/dark screenshots of the ui-countdown and ui-progress demo sections with the ring goal tick and bar goal line sampled from the pixels, an axe-core pass (online), and the framework-free assertion pages `demo/sanitizer-test.html` and `demo/store-test.html` | catches theming and accessibility regressions |
+| **H. `publish`** | `scripts/publish.py` builds the Cloudflare Pages site into a temp dir (main at the root, HEAD as a fake tag); a server that applies the generated `_headers` like Pages serves it on a second origin: every published path exists under both roots, tests/scripts/media are left out, CORS everywhere, `immutable` only under the tag; a blank page imports a component, `tokens.css` and `swapOutlet` from both roots and they work (no recordings: `tests/media` is at its budget) | the publish target must serve what consumers import, cross-origin |
 
 ## Recordings
 
@@ -150,6 +151,17 @@ Every recording is made in **dark mode** (the browser context uses `color_scheme
 | `label-placeholders` | `{value}`, `{max}` and `{percent}` in `label` are filled in and stay live, bound or not; text without placeholders is shown as is. | (no GIF) |
 | `bound-complete-fires-once-per-crossing` | Ticking the last item fires ui-complete once and shows the done slot; further store changes while complete fire nothing; unticking re-arms it and the next crossing fires again. | (no GIF) |
 | `store-swapped-out-and-back` | The binding survives the ring being removed and re-added, the `<ui-store>` element being removed and re-added, a store declared after the ring, and `store` pointing elsewhere and back, without duplicate ui-complete events. | (no GIF) |
+
+</details>
+
+#### publish
+
+<details><summary>2 tests</summary>
+
+| Test | What it checks | Recording |
+|---|---|---|
+| `pages-site-layout-and-headers` | scripts/publish.py builds the Pages site: main at the root, each tag under /<tag>/ with the same files, test/script folders left out, and a _headers file that allows cross-origin imports everywhere and marks only tag paths immutable. | (no GIF) |
+| `import-from-the-pages-site` | A blank page on another origin imports a component, tokens.css and swapOutlet from the built Pages site, from the pinned tag path and from the root: the element renders and works, ./_shared imports resolve, and swapOutlet finds components.json next to components/. | (no GIF) |
 
 </details>
 

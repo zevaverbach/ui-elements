@@ -6,6 +6,7 @@ To use this library from another project: read `components.json`, load only the 
 - Component: `<script type="module" src="https://cdn.jsdelivr.net/gh/zevaverbach/ui-elements@v0.1.0/components/<file>.js"></script>`
 - Pinned to a tag or commit SHA, not `@main` (cached for hours).
 - Pages (only if enabled): `https://zevaverbach.github.io/ui-elements/components/<file>.js`
+- Cloudflare Pages (once deployed; replaces the above): `https://ui-elements.pages.dev/v<x.y.z>/components/<file>.js` (pinned tag, immutable) or `https://ui-elements.pages.dev/components/<file>.js` (follows main), catalog at `.../components.json`
 - Optional theme: `.../tokens.css`. Override `--ui-*` on any ancestor to restyle.
 
 Each entry in the catalog lists attributes, slots, events (all `ui-*`, bubbling and composed, with `detail` shapes), CSS custom properties and `composes-well-with`. Listen for events on the element or any ancestor. Components make no network calls: you wire events to your own backend.

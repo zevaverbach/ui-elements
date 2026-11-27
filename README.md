@@ -167,6 +167,26 @@ Everything, one GIF per test, and how to run a single suite: [tests/README.md](t
 
 `@main` URLs are cached by jsDelivr for hours; use a tag or a commit SHA for stability. Relative imports inside components (`./_shared/*.js`) resolve correctly when served from jsDelivr.
 
+Cloudflare Pages (replacing GitHub + jsDelivr as the publish target once the project is deployed; see [Publish](#publish)):
+
+| What | URL |
+|---|---|
+| Component (pinned, preferred) | `https://ui-elements.pages.dev/v<x.y.z>/components/ui-todo-item.js` |
+| Component (follows `main`, 5 min cache) | `https://ui-elements.pages.dev/components/ui-todo-item.js` |
+| Catalog, tokens | `.../components.json`, `.../tokens.css` under the same root |
+| Live demo | `https://ui-elements.pages.dev/demo/` |
+
+## Publish
+
+`scripts/publish.py` builds the static site for [Cloudflare Pages](https://pages.cloudflare.com/) into `dist/` (gitignored): the checkout (main) at the root and every `v*` tag under `/<tag>/`, plus a `_headers` file that sends `Access-Control-Allow-Origin: *` everywhere (cross-origin module imports) and marks only tag paths `immutable`. Tests, scripts and `docs/media` are left out.
+
+```sh
+python3 scripts/publish.py            # build dist/ only
+python3 scripts/publish.py --deploy   # build, then `npx wrangler@<pinned> pages deploy dist --project-name ui-elements`
+```
+
+`--deploy` needs `CLOUDFLARE_API_TOKEN` (Pages: Edit) and `CLOUDFLARE_ACCOUNT_ID` in the environment and an existing Pages project (`npx wrangler pages project create ui-elements --production-branch main`, once). If the name `ui-elements` is taken on `pages.dev`, Cloudflare assigns a suffixed subdomain; update the URLs above. The suite `python3 tests/run.py --suite publish` builds the site, serves it with its `_headers`, and imports components from it on another origin.
+
 ## Try the demo locally
 
 ES modules do not load from `file://`; serve the repo root:
